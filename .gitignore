@@ -1,3 +1,4 @@
+
 ###> symfony/framework-bundle ###
 /.env.local
 /.env.local.php
@@ -10,33 +11,10 @@
 
 ###> phpunit/phpunit ###
 /phpunit.xml
-.phpunit.result.cache
+/.phpunit.cache/
 ###< phpunit/phpunit ###
 
-###> symfony/phpunit-bridge ###
-.phpunit.result.cache
-/phpunit.xml
-###< symfony/phpunit-bridge ###
-
-###> Docker ###
-docker-compose.override.yml
-
-###> IDE ###
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-
-###> OS ###
-.DS_Store
-Thumbs.db
-
-###> Composer ###
-composer.phar
-/vendor/
-
-###> Node ###
-node_modules/
-npm-debug.log
-yarn-error.log
+###> symfony/asset-mapper ###
+/public/assets/
+/assets/vendor/
+###< symfony/asset-mapper ###

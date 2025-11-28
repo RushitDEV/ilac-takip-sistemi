@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { PharmacyPanel } from './components/PharmacyPanel';
-import { PatientPanel } from './components/PatientPanel';
-import { QuickDemo } from './components/QuickDemo';
+import { PharmacyPanel } from '../frontend/src/components/PharmacyPanel';
+import { PatientPanel } from '../frontend/src/components/PatientPanel';
+import { QuickDemo } from '../frontend/src/components/QuickDemo';
 import { Pill, Zap } from 'lucide-react';
 import { apiClient, getCurrentUser, setAuthData, clearAuthData } from './apiClient';
 import { API_ENDPOINTS } from './api';

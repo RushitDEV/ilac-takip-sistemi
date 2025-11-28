@@ -1,21 +1,11 @@
-# Node.js 20 LTS imajını kullan (React/Vite için uygun)
 FROM node:20-alpine
 
-# Çalışma dizinini ayarla
 WORKDIR /app
 
-# React dosyaları artık kök dizinde
-COPY package.json .
-COPY package-lock.json .
-
-# Bağımlılıkları kur (npm install)
+COPY package.json package-lock.json ./
 RUN npm install
 
-# Geri kalan uygulama dosyalarını kopyala
 COPY . .
 
-# Vite geliştirme sunucusunu başlatmak için komutu tanımla
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
-
-# 5173 portunu dışarıya aç
 EXPOSE 5173

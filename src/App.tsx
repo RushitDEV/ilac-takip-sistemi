@@ -5,14 +5,10 @@ import { QuickDemo } from './components/QuickDemo';
 import { Pill, Zap } from 'lucide-react';
 import { apiClient, getCurrentUser, setAuthData, clearAuthData } from './apiClient';
 import { API_ENDPOINTS } from './api';
-import { Button } from './components/ui/button';
-import { Input } from './components/ui/input';
 
 export default function App() {
     const [currentUser, setCurrentUser] = useState<any>(getCurrentUser());
     const [showDemo, setShowDemo] = useState(false);
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -136,10 +132,14 @@ export default function App() {
         );
     }
 
+    // ⚠️ ÖNEMLİ: Symfony backend'den roles dizisi gelir, role string değil!
+    // Backend'den gelen user.roles örneği: ["ROLE_ADMIN"] veya ["ROLE_USER"]
+    const isPharmacy = currentUser.roles?.includes('ROLE_ADMIN');
+
     // Kullanıcı giriş yapmışsa, ilgili paneli göster
     return (
         <div>
-            {currentUser.role === 'pharmacy' ? (
+            {isPharmacy ? (
                 <PharmacyPanel user={currentUser} onLogout={handleLogout} />
             ) : (
                 <PatientPanel user={currentUser} onLogout={handleLogout} />

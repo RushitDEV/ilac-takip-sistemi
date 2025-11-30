@@ -2,116 +2,63 @@
 
 namespace App\Entity;
 
-use App\Repository\PrescriptionRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-use DateTimeImmutable; // DateTimeImmutable kullanmak için ekle
+use App\Entity\Patient;
+use App\Entity\Medication;
 
-#[ORM\Entity(repositoryClass: PrescriptionRepository::class)]
+#[ORM\Entity]
 class Prescription
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\GeneratedValue(strategy:"UUID")]
+    #[ORM\Column(type:"uuid")]
+    private $id;
 
-    #[ORM\Column(length: 100)]
-    private ?string $dose = null;
+    #[ORM\ManyToOne(targetEntity: Patient::class)]
+    #[ORM\JoinColumn(nullable:false)]
+    private $patient;
 
-    #[ORM\Column(length: 100)]
-    private ?string $frequency = null;
+    #[ORM\ManyToOne(targetEntity: Medication::class)]
+    #[ORM\JoinColumn(nullable:false)]
+    private $medication;
 
-    // KRİTİK GÜNCELLEME: date_immutable tipini kullanıyoruz
-    #[ORM\Column(type: 'date_immutable')]
-    private ?\DateTimeImmutable $startDate = null;
+    #[ORM\Column(length:200)]
+    private ?string $doctor = null;
 
-    #[ORM\Column(type: 'date_immutable', nullable: true)]
-    private ?\DateTimeImmutable $endDate = null;
+    #[ORM\Column(length:50)]
+    private ?string $dosage = null;
 
-    #[ORM\ManyToOne(inversedBy: 'prescriptions')]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?User $patient = null;
+    #[ORM\Column(length:200)]
+    private ?string $purpose = null;
 
-    #[ORM\ManyToOne(inversedBy: 'prescriptions')]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?Medication $medication = null;
+    #[ORM\Column(type:"date")]
+    private ?\DateTimeInterface $startDate = null;
 
-    /**
-     * @var Collection<int, Schedule>
-     */
-    #[ORM\OneToMany(targetEntity: Schedule::class, mappedBy: 'prescription', orphanRemoval: true)]
-    private Collection $schedules;
+    #[ORM\Column(type:"date")]
+    private ?\DateTimeInterface $endDate = null;
 
-    public function __construct()
-    {
-        $this->schedules = new ArrayCollection();
-    }
+    #[ORM\Column(type:"text", nullable:true)]
+    private ?string $instructions = null;
 
-    public function getId(): ?int
+    #[ORM\Column(type:"text", nullable:true)]
+    private ?string $sideEffects = null;
+
+
+    // GETTERS / SETTERS
+
+    public function getId()
     {
         return $this->id;
     }
 
-    public function getDose(): ?string
-    {
-        return $this->dose;
-    }
-
-    public function setDose(string $dose): static
-    {
-        $this->dose = $dose;
-
-        return $this;
-    }
-
-    public function getFrequency(): ?string
-    {
-        return $this->frequency;
-    }
-
-    public function setFrequency(string $frequency): static
-    {
-        $this->frequency = $frequency;
-
-        return $this;
-    }
-
-    public function getStartDate(): ?\DateTimeImmutable
-    {
-        return $this->startDate;
-    }
-
-    // KRİTİK GÜNCELLEME: DateTimeImmutable kabul eder
-    public function setStartDate(\DateTimeImmutable $startDate): static
-    {
-        $this->startDate = $startDate;
-
-        return $this;
-    }
-
-    public function getEndDate(): ?\DateTimeImmutable
-    {
-        return $this->endDate;
-    }
-
-    // KRİTİK GÜNCELLEME: DateTimeImmutable kabul eder
-    public function setEndDate(?\DateTimeImmutable $endDate): static
-    {
-        $this->endDate = $endDate;
-
-        return $this;
-    }
-
-    public function getPatient(): ?User
+    public function getPatient(): ?Patient
     {
         return $this->patient;
     }
 
-    public function setPatient(?User $patient): static
+    public function setPatient(Patient $patient): self
     {
         $this->patient = $patient;
-
         return $this;
     }
 
@@ -120,40 +67,86 @@ class Prescription
         return $this->medication;
     }
 
-    public function setMedication(?Medication $medication): static
+    public function setMedication(Medication $medication): self
     {
         $this->medication = $medication;
-
         return $this;
     }
 
-    /**
-     * @return Collection<int, Schedule>
-     */
-    public function getSchedules(): Collection
+    public function getDoctor(): ?string
     {
-        return $this->schedules;
+        return $this->doctor;
     }
 
-    public function addSchedule(Schedule $schedule): static
+    public function setDoctor(string $doctor): self
     {
-        if (!$this->schedules->contains($schedule)) {
-            $this->schedules->add($schedule);
-            $schedule->setPrescription($this);
-        }
-
+        $this->doctor = $doctor;
         return $this;
     }
 
-    public function removeSchedule(Schedule $schedule): static
+    public function getDosage(): ?string
     {
-        if ($this->schedules->removeElement($schedule)) {
-            // set the owning side to null (unless already changed)
-            if ($schedule->getPrescription() === $this) {
-                $schedule->setPrescription(null);
-            }
-        }
+        return $this->dosage;
+    }
 
+    public function setDosage(string $dosage): self
+    {
+        $this->dosage = $dosage;
+        return $this;
+    }
+
+    public function getPurpose(): ?string
+    {
+        return $this->purpose;
+    }
+
+    public function setPurpose(string $purpose): self
+    {
+        $this->purpose = $purpose;
+        return $this;
+    }
+
+    public function getStartDate(): ?\DateTimeInterface
+    {
+        return $this->startDate;
+    }
+
+    public function setStartDate(\DateTimeInterface $date): self
+    {
+        $this->startDate = $date;
+        return $this;
+    }
+
+    public function getEndDate(): ?\DateTimeInterface
+    {
+        return $this->endDate;
+    }
+
+    public function setEndDate(\DateTimeInterface $date): self
+    {
+        $this->endDate = $date;
+        return $this;
+    }
+
+    public function getInstructions(): ?string
+    {
+        return $this->instructions;
+    }
+
+    public function setInstructions(?string $instructions): self
+    {
+        $this->instructions = $instructions;
+        return $this;
+    }
+
+    public function getSideEffects(): ?string
+    {
+        return $this->sideEffects;
+    }
+
+    public function setSideEffects(?string $sideEffects): self
+    {
+        $this->sideEffects = $sideEffects;
         return $this;
     }
 }

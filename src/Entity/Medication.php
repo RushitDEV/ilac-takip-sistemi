@@ -2,48 +2,58 @@
 
 namespace App\Entity;
 
-use App\Repository\MedicationRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: MedicationRepository::class)]
+#[ORM\Entity]
 class Medication
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\GeneratedValue(strategy: "UUID")]
+    #[ORM\Column(type:"uuid")]
+    private $id;
 
-    #[ORM\Column(length: 255)]
-    private ?string $name = null;
-
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $activeIngredient = null;
-
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $form = null;
-
-    #[ORM\Column(length: 50, nullable: true)]
-    private ?string $strength = null;
-
-    #[ORM\Column(length: 100, nullable: true)]
+    #[ORM\Column(length: 50, unique: true)]
     private ?string $barcode = null;
 
-    /**
-     * @var Collection<int, Prescription>
-     */
-    #[ORM\OneToMany(targetEntity: Prescription::class, mappedBy: 'medication')]
-    private Collection $prescriptions;
+    #[ORM\Column(length: 200)]
+    private ?string $name = null;
+
+    #[ORM\Column(length: 200)]
+    private ?string $activeIngredient = null;
+
+    #[ORM\Column(length: 200)]
+    private ?string $manufacturer = null;
+
+    #[ORM\Column(type:"date", nullable:true)]
+    private ?\DateTimeInterface $expiryDate = null;
+
+    #[ORM\Column(type:"decimal", precision:10, scale:2)]
+    private ?string $price = null;
+
+    #[ORM\Column(type:"datetime")]
+    private ?\DateTimeInterface $createdAt;
 
     public function __construct()
     {
-        $this->prescriptions = new ArrayCollection();
+        $this->createdAt = new \DateTime();
     }
 
-    public function getId(): ?int
+    // GETTERS & SETTERS
+
+    public function getId()
     {
         return $this->id;
+    }
+
+    public function getBarcode(): ?string
+    {
+        return $this->barcode;
+    }
+
+    public function setBarcode(?string $barcode): self
+    {
+        $this->barcode = $barcode;
+        return $this;
     }
 
     public function getName(): ?string
@@ -51,10 +61,9 @@ class Medication
         return $this->name;
     }
 
-    public function setName(string $name): static
+    public function setName(string $name): self
     {
         $this->name = $name;
-
         return $this;
     }
 
@@ -63,76 +72,53 @@ class Medication
         return $this->activeIngredient;
     }
 
-    public function setActiveIngredient(?string $activeIngredient): static
+    public function setActiveIngredient(string $active): self
     {
-        $this->activeIngredient = $activeIngredient;
-
+        $this->activeIngredient = $active;
         return $this;
     }
 
-    public function getForm(): ?string
+    public function getManufacturer(): ?string
     {
-        return $this->form;
+        return $this->manufacturer;
     }
 
-    public function setForm(?string $form): static
+    public function setManufacturer(string $manufacturer): self
     {
-        $this->form = $form;
-
+        $this->manufacturer = $manufacturer;
         return $this;
     }
 
-    public function getStrength(): ?string
+    public function getExpiryDate(): ?\DateTimeInterface
     {
-        return $this->strength;
+        return $this->expiryDate;
     }
 
-    public function setStrength(?string $strength): static
+    public function setExpiryDate(?\DateTimeInterface $expiry): self
     {
-        $this->strength = $strength;
-
+        $this->expiryDate = $expiry;
         return $this;
     }
 
-    public function getBarcode(): ?string
+    public function getPrice(): ?string
     {
-        return $this->barcode;
+        return $this->price;
     }
 
-    public function setBarcode(?string $barcode): static
+    public function setPrice(string $price): self
     {
-        $this->barcode = $barcode;
-
+        $this->price = $price;
         return $this;
     }
 
-    /**
-     * @return Collection<int, Prescription>
-     */
-    public function getPrescriptions(): Collection
+    public function getCreatedAt(): ?\DateTimeInterface
     {
-        return $this->prescriptions;
+        return $this->createdAt;
     }
 
-    public function addPrescription(Prescription $prescription): static
+    public function setCreatedAt(\DateTimeInterface $createdAt): self
     {
-        if (!$this->prescriptions->contains($prescription)) {
-            $this->prescriptions->add($prescription);
-            $prescription->setMedication($this);
-        }
-
-        return $this;
-    }
-
-    public function removePrescription(Prescription $prescription): static
-    {
-        if ($this->prescriptions->removeElement($prescription)) {
-            // set the owning side to null (unless already changed)
-            if ($prescription->getMedication() === $this) {
-                $prescription->setMedication(null);
-            }
-        }
-
+        $this->createdAt = $createdAt;
         return $this;
     }
 }

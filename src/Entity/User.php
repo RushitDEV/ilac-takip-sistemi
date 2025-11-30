@@ -2,154 +2,95 @@
 
 namespace App\Entity;
 
-use App\Repository\UserRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-// KRİTİK EKLENTİLER: Şifreleme ve Güvenlik için zorunlu arayüzler
-use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
-use Symfony\Component\Security\Core\User\UserInterface;
 
-#[ORM\Entity(repositoryClass: UserRepository::class)]
-#[ORM\Table(name: '`user`')]
-// KRİTİK GÜNCELLEME: UserInterface ve PasswordAuthenticatedUserInterface arayüzleri uygulanıyor
-class User implements UserInterface, PasswordAuthenticatedUserInterface
+#[ORM\Entity]
+class User
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\GeneratedValue(strategy: "UUID")]
+    #[ORM\Column(type: "uuid")]
+    private ?string $id = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $name = null;
+
+    #[ORM\Column(length: 120, unique: true)]
     private ?string $email = null;
 
     #[ORM\Column(length: 255)]
     private ?string $password = null;
 
-    /**
-     * @var Collection<int, Prescription>
-     */
-    #[ORM\OneToMany(targetEntity: Prescription::class, mappedBy: 'patient')]
-    private Collection $prescriptions;
+    #[ORM\Column(length: 20)]
+    private ?string $role = null; // patient | pharmacist | admin
 
-    #[ORM\Column(type: 'json')] // User rol bilgisini tutan alan
-    private array $roles = [];
+    #[ORM\Column(type: "datetime")]
+    private ?\DateTimeInterface $createdAt = null;
 
     public function __construct()
     {
-        $this->prescriptions = new ArrayCollection();
+        $this->createdAt = new \DateTime();
     }
 
-    public function getId(): ?int
+    // ========== GETTER & SETTER METOTLARI ==========
+
+    public function getId(): ?string
     {
         return $this->id;
     }
 
-    //
-    // GÜVENLİK (SECURITY) VE KULLANICI METOTLARI
-    //
-
-    /**
-     * Kullanıcının kimliğini temsil eden görsel bir tanımlayıcı (e.g. email).
-     * @see UserInterface
-     */
-    public function getUserIdentifier(): string
+    public function getName(): ?string
     {
-        return (string) $this->email;
+        return $this->name;
     }
 
-    /**
-     * @see UserInterface
-     */
-    public function getRoles(): array
+    public function setName(?string $name): self
     {
-        $roles = $this->roles;
-        // Tüm kullanıcıların en azından ROLE_USER rolüne sahip olduğundan emin ol
-        $roles[] = 'ROLE_USER';
-
-        return array_unique($roles);
-    }
-
-    public function setRoles(array $roles): static
-    {
-        $this->roles = $roles;
-
+        $this->name = $name;
         return $this;
     }
-
-    /**
-     * @see PasswordAuthenticatedUserInterface
-     */
-    public function getPassword(): ?string
-    {
-        return $this->password;
-    }
-
-    public function setPassword(string $password): static
-    {
-        $this->password = $password;
-
-        return $this;
-    }
-
-    /**
-     * Kullanıcıdan geçici, hassas verileri siler (örneğin plainPassword).
-     * @see UserInterface
-     */
-    public function eraseCredentials(): void
-    {
-        // $this->plainPassword = null;
-    }
-
-    //
-    // DİĞER DOCTRINE METOTLARI
-    //
 
     public function getEmail(): ?string
     {
         return $this->email;
     }
 
-    public function setEmail(string $email): static
+    public function setEmail(string $email): self
     {
         $this->email = $email;
-
         return $this;
     }
 
-    /**
-     * @return Collection<int, Prescription>
-     */
-    public function getPrescriptions(): Collection
+    public function getPassword(): ?string
     {
-        return $this->prescriptions;
+        return $this->password;
     }
 
-    public function addPrescription(Prescription $prescription): static
+    public function setPassword(string $hashedPassword): self
     {
-        if (!$this->prescriptions->contains($prescription)) {
-            $this->prescriptions->add($prescription);
-            $prescription->setPatient($this);
-        }
-
+        $this->password = $hashedPassword;
         return $this;
     }
 
-    public function removePrescription(Prescription $prescription): static
+    public function getRole(): ?string
     {
-        if ($this->prescriptions->removeElement($prescription)) {
-            // set the owning side to null (unless already changed)
-            if ($prescription->getPatient() === $this) {
-                $prescription->setPatient(null);
-            }
-        }
+        return $this->role;
+    }
 
+    public function setRole(string $role): self
+    {
+        $this->role = $role;
         return $this;
     }
 
-    // Gerekli olsa da modern hashleme algoritmaları için null döndürülür
-    public function getSalt(): ?string
+    public function getCreatedAt(): ?\DateTimeInterface
     {
-        return null;
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(\DateTimeInterface $createdAt): self
+    {
+        $this->createdAt = $createdAt;
+        return $this;
     }
 }

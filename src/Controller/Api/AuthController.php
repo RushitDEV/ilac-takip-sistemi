@@ -4,69 +4,68 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Routing\Annotation\Route;
 
-#[Route('/api/auth', name: 'api_auth_')]
+#[Route('/api/auth')]
 class AuthController extends AbstractController
 {
-    private EntityManagerInterface $entityManager;
-    private UserPasswordHasherInterface $passwordHasher;
+    #[Route('/register', methods: ['POST'])]
+    public function register(
+        Request $request,
+        EntityManagerInterface $em,
+        UserPasswordHasherInterface $passwordHasher
+    ): JsonResponse {
 
-    // Bağımlılık Enjeksiyonu
-    public function __construct(EntityManagerInterface $entityManager, UserPasswordHasherInterface $passwordHasher)
-    {
-        $this->entityManager = $entityManager;
-        $this->passwordHasher = $passwordHasher;
-    }
-
-    /**
-     * Kullanıcı girişi için mock API.
-     */
-    #[Route('/login', name: 'login', methods: ['POST'])]
-    public function login(Request $request): JsonResponse
-    {
         $data = json_decode($request->getContent(), true);
-        $email = $data['email'] ?? null;
-        $password = $data['password'] ?? null;
 
-        if (!$email || !$password) {
-            return $this->json(['message' => 'E-posta ve şifre gerekli.'], 400);
+        if (!$data || !isset($data['email']) || !isset($data['password'])) {
+            return new JsonResponse([
+                'error' => 'Geçersiz veri'
+            ], 400);
         }
 
-        // Kullanıcıyı bul
-        $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+        // Email tekrar kontrolü
+        $existing = $em->getRepository(User::class)->findOneBy([
+            'email' => $data['email']
+        ]);
 
-        if (!$user) {
-            return $this->json(['message' => 'Geçersiz kimlik bilgileri.'], 401);
+        if ($existing) {
+            return new JsonResponse([
+                'error' => 'Bu email zaten kayıtlı'
+            ], 409);
         }
 
-        // Şifre kontrolü
-        if (!$this->passwordHasher->isPasswordValid($user, $password)) {
-            return $this->json(['message' => 'Geçersiz kimlik bilgileri.'], 401);
-        }
+        $user = new User();
+        $user->setName($data['name'] ?? null);
+        $user->setEmail($data['email']);
+        $user->setRole('patient');
 
-        // ✅ DÜZELTME: Gerçek user verisini döndür
-        return $this->json([
-            'token' => 'mock_jwt_token_' . bin2hex(random_bytes(16)),
+        $hashedPassword = $passwordHasher->hashPassword($user, $data['password']);
+        $user->setPassword($hashedPassword);
+
+        $em->persist($user);
+        $em->flush();
+
+        return new JsonResponse([
+            'message' => 'Kayıt başarılı',
             'user' => [
                 'id' => $user->getId(),
                 'email' => $user->getEmail(),
-                'roles' => $user->getRoles(),  // ✅ Array olarak döner
-            ],
+                'role' => $user->getRole()
+            ]
         ]);
     }
 
-    /**
-     * Oturumu kapatma.
-     */
-    #[Route('/logout', name: 'logout', methods: ['POST'])]
-    public function logout(): JsonResponse
+    #[Route('/login', methods: ['POST'])]
+    public function login(): JsonResponse
     {
-        return $this->json(['message' => 'Oturum başarıyla kapatıldı.']);
+        // JWT login firewall otomatik token döner.
+        return new JsonResponse([
+            'message' => 'Login başarılı'
+        ]);
     }
 }

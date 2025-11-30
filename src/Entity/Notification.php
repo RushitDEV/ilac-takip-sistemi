@@ -9,9 +9,11 @@ use App\Entity\User;
 class Notification
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue(strategy: "UUID")]
+    #[ORM\GeneratedValue(strategy: "CUSTOM")]
+    #[ORM\CustomIdGenerator(class: "Ramsey\Uuid\Doctrine\UuidGenerator")]
     #[ORM\Column(type: "uuid")]
-    private $id;
+    private ?string $id = null;
+
 
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: "CASCADE")]

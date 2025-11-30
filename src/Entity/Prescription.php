@@ -10,9 +10,11 @@ use App\Entity\Medication;
 class Prescription
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue(strategy:"UUID")]
-    #[ORM\Column(type:"uuid")]
-    private $id;
+    #[ORM\GeneratedValue(strategy: "CUSTOM")]
+    #[ORM\CustomIdGenerator(class: "Ramsey\Uuid\Doctrine\UuidGenerator")]
+    #[ORM\Column(type: "uuid")]
+    private ?string $id = null;
+
 
     #[ORM\ManyToOne(targetEntity: Patient::class)]
     #[ORM\JoinColumn(nullable:false)]

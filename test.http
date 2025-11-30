@@ -1,0 +1,8 @@
+### LOGIN TEST
+POST http://localhost/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "harun@example.com",
+    "password": "123456"
+}

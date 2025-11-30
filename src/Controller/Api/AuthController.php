@@ -22,48 +22,25 @@ class AuthController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
 
-        if (!$data || !isset($data['email']) || !isset($data['password'])) {
-            return new JsonResponse([
-                'error' => 'Geçersiz veri'
-            ], 400);
-        }
-
-        // Email tekrar kontrolü
-        $existing = $em->getRepository(User::class)->findOneBy([
-            'email' => $data['email']
-        ]);
-
-        if ($existing) {
-            return new JsonResponse([
-                'error' => 'Bu email zaten kayıtlı'
-            ], 409);
-        }
-
         $user = new User();
         $user->setName($data['name'] ?? null);
         $user->setEmail($data['email']);
         $user->setRole('patient');
-
-        $hashedPassword = $passwordHasher->hashPassword($user, $data['password']);
-        $user->setPassword($hashedPassword);
+        $user->setPassword(
+            $passwordHasher->hashPassword($user, $data['password'])
+        );
 
         $em->persist($user);
         $em->flush();
 
         return new JsonResponse([
             'message' => 'Kayıt başarılı',
-            'user' => [
-                'id' => $user->getId(),
-                'email' => $user->getEmail(),
-                'role' => $user->getRole()
-            ]
         ]);
     }
 
     #[Route('/login', methods: ['POST'])]
     public function login(): JsonResponse
     {
-        // JWT login firewall otomatik token döner.
         return new JsonResponse([
             'message' => 'Login başarılı'
         ]);

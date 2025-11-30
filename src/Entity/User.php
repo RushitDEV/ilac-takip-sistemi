@@ -3,9 +3,12 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 
 #[ORM\Entity]
-class User
+#[ORM\Table(name: "users")]
+class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: "CUSTOM")]
@@ -23,7 +26,7 @@ class User
     private ?string $password = null;
 
     #[ORM\Column(length: 20)]
-    private ?string $role = null; // patient | pharmacist | admin
+    private ?string $role = 'patient';
 
     #[ORM\Column(type: "datetime")]
     private ?\DateTimeInterface $createdAt = null;
@@ -33,7 +36,32 @@ class User
         $this->createdAt = new \DateTime();
     }
 
-    // ========== GETTER & SETTER METOTLARI ==========
+    // REQUIRED BY SYMFONY SECURITY
+    public function getUserIdentifier(): string
+    {
+        return $this->email;
+    }
+
+    public function getRoles(): array
+    {
+        return [$this->role];
+    }
+
+    public function eraseCredentials(): void {}
+
+    // PASSWORD INTERFACE
+    public function getPassword(): ?string
+    {
+        return $this->password;
+    }
+
+    public function setPassword(string $hashedPassword): self
+    {
+        $this->password = $hashedPassword;
+        return $this;
+    }
+
+    // NORMAL FIELDS
 
     public function getId(): ?string
     {
@@ -59,17 +87,6 @@ class User
     public function setEmail(string $email): self
     {
         $this->email = $email;
-        return $this;
-    }
-
-    public function getPassword(): ?string
-    {
-        return $this->password;
-    }
-
-    public function setPassword(string $hashedPassword): self
-    {
-        $this->password = $hashedPassword;
         return $this;
     }
 

@@ -13,36 +13,35 @@ class Medication
     #[ORM\Column(type: "uuid")]
     private ?string $id = null;
 
-
     #[ORM\Column(length: 50, unique: true)]
     private ?string $barcode = null;
 
     #[ORM\Column(length: 200)]
     private ?string $name = null;
 
-    #[ORM\Column(length: 200)]
-    private ?string $activeIngredient = null;
+    #[ORM\Column(length: 200, nullable: true)]
+    private ?string $description = null;
 
     #[ORM\Column(length: 200)]
     private ?string $manufacturer = null;
 
-    #[ORM\Column(type:"date", nullable:true)]
-    private ?\DateTimeInterface $expiryDate = null;
+    #[ORM\Column(length: 100)]
+    private ?string $type = null;
 
-    #[ORM\Column(type:"decimal", precision:10, scale:2)]
-    private ?string $price = null;
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $imageUrl = null;
 
-    #[ORM\Column(type:"datetime")]
-    private ?\DateTimeInterface $createdAt;
+    #[ORM\Column(type: "datetime")]
+    private ?\DateTimeInterface $createdAt = null;
 
     public function __construct()
     {
         $this->createdAt = new \DateTime();
     }
 
-    // GETTERS & SETTERS
+    // ========== GETTERS & SETTERS ==========
 
-    public function getId()
+    public function getId(): ?string
     {
         return $this->id;
     }
@@ -69,14 +68,14 @@ class Medication
         return $this;
     }
 
-    public function getActiveIngredient(): ?string
+    public function getDescription(): ?string
     {
-        return $this->activeIngredient;
+        return $this->description;
     }
 
-    public function setActiveIngredient(string $active): self
+    public function setDescription(?string $description): self
     {
-        $this->activeIngredient = $active;
+        $this->description = $description;
         return $this;
     }
 
@@ -91,25 +90,25 @@ class Medication
         return $this;
     }
 
-    public function getExpiryDate(): ?\DateTimeInterface
+    public function getType(): ?string
     {
-        return $this->expiryDate;
+        return $this->type;
     }
 
-    public function setExpiryDate(?\DateTimeInterface $expiry): self
+    public function setType(string $type): self
     {
-        $this->expiryDate = $expiry;
+        $this->type = $type;
         return $this;
     }
 
-    public function getPrice(): ?string
+    public function getImageUrl(): ?string
     {
-        return $this->price;
+        return $this->imageUrl;
     }
 
-    public function setPrice(string $price): self
+    public function setImageUrl(?string $imageUrl): self
     {
-        $this->price = $price;
+        $this->imageUrl = $imageUrl;
         return $this;
     }
 

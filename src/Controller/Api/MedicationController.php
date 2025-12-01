@@ -13,11 +13,8 @@ use Symfony\Component\Routing\Annotation\Route;
 class MedicationController extends AbstractController
 {
     #[Route('', methods: ['POST'])]
-    public function create(
-        Request $request,
-        EntityManagerInterface $em
-    ): JsonResponse {
-
+    public function create(Request $request, EntityManagerInterface $em): JsonResponse
+    {
         $data = json_decode($request->getContent(), true);
 
         $med = new Medication();
@@ -25,8 +22,10 @@ class MedicationController extends AbstractController
         $med->setDescription($data['description'] ?? null);
         $med->setBarcode($data['barcode']);
         $med->setManufacturer($data['manufacturer']);
+        $med->setActiveIngredient($data['activeIngredient']);
         $med->setType($data['type']);
         $med->setImageUrl($data['imageUrl'] ?? null);
+        $med->setPrice($data['price'] ?? null);
 
         $em->persist($med);
         $em->flush();
@@ -43,6 +42,7 @@ class MedicationController extends AbstractController
         $medications = $em->getRepository(Medication::class)->findAll();
 
         $response = [];
+
         foreach ($medications as $m) {
             $response[] = [
                 'id' => $m->getId(),
@@ -50,6 +50,7 @@ class MedicationController extends AbstractController
                 'barcode' => $m->getBarcode(),
                 'type' => $m->getType(),
                 'manufacturer' => $m->getManufacturer(),
+                'activeIngredient' => $m->getActiveIngredient(),
                 'imageUrl' => $m->getImageUrl()
             ];
         }
@@ -61,6 +62,7 @@ class MedicationController extends AbstractController
     public function detail($id, EntityManagerInterface $em): JsonResponse
     {
         $med = $em->getRepository(Medication::class)->find($id);
+
         if (!$med) {
             return new JsonResponse(['error' => 'İlaç bulunamadı'], 404);
         }
@@ -72,6 +74,7 @@ class MedicationController extends AbstractController
             'barcode' => $med->getBarcode(),
             'type' => $med->getType(),
             'manufacturer' => $med->getManufacturer(),
+            'activeIngredient' => $med->getActiveIngredient(),
             'imageUrl' => $med->getImageUrl()
         ]);
     }
@@ -80,6 +83,7 @@ class MedicationController extends AbstractController
     public function update($id, Request $request, EntityManagerInterface $em): JsonResponse
     {
         $med = $em->getRepository(Medication::class)->find($id);
+
         if (!$med) {
             return new JsonResponse(['error' => 'İlaç bulunamadı'], 404);
         }
@@ -91,7 +95,9 @@ class MedicationController extends AbstractController
         $med->setBarcode($data['barcode'] ?? $med->getBarcode());
         $med->setType($data['type'] ?? $med->getType());
         $med->setManufacturer($data['manufacturer'] ?? $med->getManufacturer());
+        $med->setActiveIngredient($data['activeIngredient'] ?? $med->getActiveIngredient());
         $med->setImageUrl($data['imageUrl'] ?? $med->getImageUrl());
+        $med->setPrice($data['price'] ?? $med->getPrice());
 
         $em->flush();
 

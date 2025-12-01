@@ -1,36 +1,7 @@
-### REGISTER TEST
-POST http://localhost/api/auth/register
-Content-Type: application/json
-
-{
-    "name": "Harun",
-    "email": "harun@example.com",
-    "password": "123456"
-}
-
-###
-
-### LOGIN TEST
 POST http://localhost/api/auth/login
 Content-Type: application/json
 
 {
     "email": "harun@example.com",
     "password": "123456"
-}
-
-###
-
-### CREATE MEDICATION (Token buraya gelecek)
-POST http://localhost/api/medication
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-    "name": "Parol",
-    "barcode": "8699546012345",
-    "type": "Ağrı Kesici",
-    "manufacturer": "Abdi Ibrahim",
-    "description": "Parasetamol 500mg tablet",
-    "imageUrl": "https://example.com/parol.png"
 }

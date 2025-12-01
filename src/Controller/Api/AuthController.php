@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
 #[Route('/api/auth')]
 class AuthController extends AbstractController
@@ -39,10 +40,43 @@ class AuthController extends AbstractController
     }
 
     #[Route('/login', methods: ['POST'])]
-    public function login(): JsonResponse
-    {
+    public function login(
+        Request $request,
+        EntityManagerInterface $em,
+        UserPasswordHasherInterface $passwordHasher,
+        JWTTokenManagerInterface $jwt
+    ): JsonResponse {
+
+        $data = json_decode($request->getContent(), true);
+
+        $user = $em->getRepository(User::class)->findOneBy([
+            'email' => $data['email']
+        ]);
+
+        if (!$user) {
+            return new JsonResponse(['message' => 'Kullanıcı bulunamadı'], 404);
+        }
+
+        if (!$passwordHasher->isPasswordValid($user, $data['password'])) {
+            return new JsonResponse(['message' => 'Şifre hatalı'], 401);
+        }
+
+        // JWT token oluştur
+        $token = $jwt->create($user);
+
+        // ROLE DÖNÜŞÜMÜ
+        $roles = $user->getRole() === 'pharmacy'
+            ? ['ROLE_ADMIN']
+            : ['ROLE_USER'];
+
         return new JsonResponse([
-            'message' => 'Login başarılı'
+            'token' => $token,
+            'user' => [
+                'id' => $user->getId(),
+                'email' => $user->getEmail(),
+                'name' => $user->getName(),
+                'roles' => $roles
+            ]
         ]);
     }
 }

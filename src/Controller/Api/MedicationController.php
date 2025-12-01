@@ -18,21 +18,19 @@ class MedicationController extends AbstractController
         $data = json_decode($request->getContent(), true);
 
         $med = new Medication();
-        $med->setName($data['name']);
+        $med->setName($data['name'] ?? '');
         $med->setDescription($data['description'] ?? null);
-        $med->setBarcode($data['barcode']);
-        $med->setManufacturer($data['manufacturer']);
-        $med->setActiveIngredient($data['activeIngredient']);
-        $med->setType($data['type']);
+        $med->setBarcode($data['barcode'] ?? '');
+        $med->setManufacturer($data['manufacturer'] ?? '');
+        $med->setType($data['type'] ?? '');
         $med->setImageUrl($data['imageUrl'] ?? null);
-        $med->setPrice($data['price'] ?? null);
 
         $em->persist($med);
         $em->flush();
 
         return new JsonResponse([
             'message' => 'İlaç başarıyla eklendi',
-            'id' => $med->getId()
+            'id'      => $med->getId(),
         ]);
     }
 
@@ -45,13 +43,14 @@ class MedicationController extends AbstractController
 
         foreach ($medications as $m) {
             $response[] = [
-                'id' => $m->getId(),
-                'name' => $m->getName(),
-                'barcode' => $m->getBarcode(),
-                'type' => $m->getType(),
+                'id'           => $m->getId(),
+                'name'         => $m->getName(),
+                'barcode'      => $m->getBarcode(),
+                'type'         => $m->getType(),
                 'manufacturer' => $m->getManufacturer(),
-                'activeIngredient' => $m->getActiveIngredient(),
-                'imageUrl' => $m->getImageUrl()
+                'description'  => $m->getDescription(),
+                'imageUrl'     => $m->getImageUrl(),
+                'createdAt'    => $m->getCreatedAt()?->format('Y-m-d H:i:s'),
             ];
         }
 
@@ -59,7 +58,7 @@ class MedicationController extends AbstractController
     }
 
     #[Route('/{id}', methods: ['GET'])]
-    public function detail($id, EntityManagerInterface $em): JsonResponse
+    public function detail(string $id, EntityManagerInterface $em): JsonResponse
     {
         $med = $em->getRepository(Medication::class)->find($id);
 
@@ -68,19 +67,19 @@ class MedicationController extends AbstractController
         }
 
         return new JsonResponse([
-            'id' => $med->getId(),
-            'name' => $med->getName(),
-            'description' => $med->getDescription(),
-            'barcode' => $med->getBarcode(),
-            'type' => $med->getType(),
+            'id'           => $med->getId(),
+            'name'         => $med->getName(),
+            'description'  => $med->getDescription(),
+            'barcode'      => $med->getBarcode(),
+            'type'         => $med->getType(),
             'manufacturer' => $med->getManufacturer(),
-            'activeIngredient' => $med->getActiveIngredient(),
-            'imageUrl' => $med->getImageUrl()
+            'imageUrl'     => $med->getImageUrl(),
+            'createdAt'    => $med->getCreatedAt()?->format('Y-m-d H:i:s'),
         ]);
     }
 
     #[Route('/{id}', methods: ['PUT'])]
-    public function update($id, Request $request, EntityManagerInterface $em): JsonResponse
+    public function update(string $id, Request $request, EntityManagerInterface $em): JsonResponse
     {
         $med = $em->getRepository(Medication::class)->find($id);
 
@@ -95,9 +94,7 @@ class MedicationController extends AbstractController
         $med->setBarcode($data['barcode'] ?? $med->getBarcode());
         $med->setType($data['type'] ?? $med->getType());
         $med->setManufacturer($data['manufacturer'] ?? $med->getManufacturer());
-        $med->setActiveIngredient($data['activeIngredient'] ?? $med->getActiveIngredient());
         $med->setImageUrl($data['imageUrl'] ?? $med->getImageUrl());
-        $med->setPrice($data['price'] ?? $med->getPrice());
 
         $em->flush();
 
@@ -105,7 +102,7 @@ class MedicationController extends AbstractController
     }
 
     #[Route('/{id}', methods: ['DELETE'])]
-    public function delete($id, EntityManagerInterface $em): JsonResponse
+    public function delete(string $id, EntityManagerInterface $em): JsonResponse
     {
         $med = $em->getRepository(Medication::class)->find($id);
 

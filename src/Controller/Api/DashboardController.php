@@ -26,11 +26,16 @@ class DashboardController extends AbstractController
         // Toplam ilaç sayısı
         $totalMedicines = $medRepo->count([]);
 
-        // Stok toplamı
-        $totalStock = $em->getConnection()->fetchOne("SELECT SUM(quantity) FROM stock");
+        // Toplam mevcut stok miktarı
+        $totalStock = $em->getConnection()->fetchOne("
+            SELECT SUM(current_stock) FROM stock
+        ");
 
-        // Düşük stok ( < 20 )
-        $lowStock = $em->getConnection()->fetchOne("SELECT COUNT(*) FROM stock WHERE quantity < 20");
+        // Düşük stok (min_stock üst sınır)
+        $lowStock = $em->getConnection()->fetchOne("
+            SELECT COUNT(*) FROM stock
+            WHERE current_stock < min_stock
+        ");
 
         // Bugün eklenen ilaçlar
         $todayAdded = $em->getConnection()->fetchOne("
@@ -44,7 +49,7 @@ class DashboardController extends AbstractController
         // Bekleyen sevkiyat
         $pendingShipments = $shipmentRepo->count(['status' => 'pending']);
 
-        // Bildirimler
+        // Bildirim sayısı
         $notificationCount = $notificationRepo->count([]);
 
         return new JsonResponse([

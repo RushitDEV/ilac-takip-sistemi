@@ -131,7 +131,7 @@ export default function App() {
     }
 
     // BACKEND'DEN: user.roles → ["pharmacy"] gelecektir
-    const isPharmacy = currentUser?.roles?.includes('pharmacy');
+    const isPharmacy = currentUser?.roles?.includes('ROLE_ADMIN');
 
     return (
         <div>

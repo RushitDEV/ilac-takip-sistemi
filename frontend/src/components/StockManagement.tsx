@@ -1,10 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-    Package,
     AlertTriangle,
-    TrendingUp,
-    Search,
-    Filter,
     PlusCircle,
     MinusCircle,
 } from 'lucide-react';
@@ -12,7 +8,8 @@ import { apiClient } from "../apiClient";
 import { API_ENDPOINTS } from "../api";
 
 interface StockItem {
-    id: string;
+    id: number;
+    medicationId: number;
     name: string;
     barcode: string;
     manufacturer: string;
@@ -28,10 +25,8 @@ interface StockItem {
 
 export function StockManagement() {
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] =
-        useState<'all' | 'good' | 'low' | 'critical'>('all');
+    const [filterStatus] = useState<'all' | 'good' | 'low' | 'critical'>('all');
     const [stocks, setStocks] = useState<StockItem[]>([]);
-
     const [allMedications, setAllMedications] = useState<any[]>([]);
     const [showAdjustModal, setShowAdjustModal] = useState(false);
     const [adjustType, setAdjustType] = useState<"add" | "remove">("add");
@@ -49,11 +44,8 @@ export function StockManagement() {
             const exp = new Date(expiryDate);
             const diffDays = (exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
 
-            if (diffDays <= 7) {
-                expiryCritical = true;
-            } else if (diffDays <= 30 && current > min * 1.5) {
-                return "low";
-            }
+            if (diffDays <= 7) expiryCritical = true;
+            else if (diffDays <= 30 && current > min * 1.5) return "low";
         }
 
         if (expiryCritical) return "critical";
@@ -73,14 +65,9 @@ export function StockManagement() {
                     item.medication?.expirationDate ??
                     null;
 
-                const status = calculateStatus(
-                    item.currentStock,
-                    item.minStock,
-                    expiry
-                );
-
                 return {
                     id: item.id,
+                    medicationId: item.medication.id, // ✔ EKLENDİ
                     name: item.medication.name,
                     barcode: item.medication.barcode,
                     manufacturer: item.medication.manufacturer,
@@ -91,7 +78,7 @@ export function StockManagement() {
                     lastRestocked: item.lastRestock,
                     expiryDate: expiry,
                     price: item.medication.price ?? 0,
-                    status,
+                    status: calculateStatus(item.currentStock, item.minStock, expiry),
                 };
             });
 
@@ -105,7 +92,7 @@ export function StockManagement() {
         try {
             const meds = await apiClient(API_ENDPOINTS.MEDICATION_LIST);
             setAllMedications(meds || []);
-        } catch (error) {
+        } catch {
             console.error("İlaçlar yüklenemedi.");
         }
     };
@@ -120,10 +107,7 @@ export function StockManagement() {
             med.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             med.barcode.includes(searchTerm);
 
-        const matchesFilter =
-            filterStatus === 'all' || med.status === filterStatus;
-
-        return matchesSearch && matchesFilter;
+        return matchesSearch;
     });
 
     const openAdjustModal = (stock: StockItem | null, type: "add" | "remove") => {
@@ -131,6 +115,7 @@ export function StockManagement() {
         setAdjustType(type);
         setAdjustAmount("");
         setAdjustNote("");
+        setSelectedMedicationId("");
         setShowAdjustModal(true);
     };
 
@@ -152,36 +137,43 @@ export function StockManagement() {
 
         try {
             if (adjustType === "add" && !selectedStock) {
+                // ✔ YENİ STOK EKLEME
                 await apiClient(API_ENDPOINTS.STOCK_ADD, {
                     method: "POST",
                     data: {
-                        medicationId: selectedMedicationId,
+                        medicationId: Number(selectedMedicationId),
                         amount: amountNum,
                         note: adjustNote,
                         minStock: 5,
                         maxStock: 100
                     },
                 });
+            } else if (adjustType === "add" && selectedStock) {
+                // ✔ MEVCUT STOĞU ARTIRMA
+                await apiClient(API_ENDPOINTS.STOCK_ADD, {
+                    method: "POST",
+                    data: {
+                        medicationId: selectedStock.medicationId, // ✔ DÜZELTİLDİ
+                        amount: amountNum,
+                        note: adjustNote,
+                    },
+                });
             } else {
-                await apiClient(
-                    adjustType === "add"
-                        ? API_ENDPOINTS.STOCK_ADD
-                        : API_ENDPOINTS.STOCK_REMOVE,
-                    {
-                        method: "POST",
-                        data: {
-                            stockId: selectedStock?.id,
-                            amount: amountNum,
-                            note: adjustNote,
-                        },
-                    }
-                );
+                // ✔ STOĞU DÜŞÜRME
+                await apiClient(API_ENDPOINTS.STOCK_REMOVE, {
+                    method: "POST",
+                    data: {
+                        stockId: selectedStock?.id, // REMOVE için doğru
+                        amount: amountNum,
+                        note: adjustNote,
+                    },
+                });
             }
 
             await loadStock();
             closeAdjustModal();
         } catch (error: any) {
-            alert("Stok güncellenemedi: " + error.message);
+            alert("Stok güncellenemedi: " + JSON.stringify(error));
         } finally {
             setIsSaving(false);
         }
@@ -190,20 +182,18 @@ export function StockManagement() {
     return (
         <div className="max-w-7xl mx-auto">
 
-            {/* ÜST BAR */}
-            <div className="flex justify-between items-center mb-6 mt-4">
-                <h2 className="text-2xl font-bold text-gray-900">Stok Yönetimi</h2>
+            <div className="flex justify-between items-center my-6">
+                <h2 className="text-2xl font-bold">Stok Yönetimi</h2>
 
                 <button
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 hover:bg-blue-700"
                     onClick={() => openAdjustModal(null, "add")}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2"
                 >
-                    <PlusCircle className="w-5 h-5" />
-                    Yeni Stok Ekle
+                    <PlusCircle className="w-5 h-5" /> Yeni Stok Ekle
                 </button>
             </div>
 
-            {/* ⭐⭐⭐ STOK TABLOSU AŞAĞIDA ⭐⭐⭐ */}
+            {/* --- STOK TABLOSU --- */}
             <div className="bg-white rounded-xl shadow p-4">
                 <table className="w-full text-left">
                     <thead>
@@ -244,16 +234,15 @@ export function StockManagement() {
                             <td className="flex gap-2 py-2">
                                 <button
                                     onClick={() => openAdjustModal(s, "add")}
-                                    className="p-2 bg-green-600 text-white rounded hover:bg-green-700"
+                                    className="p-2 bg-green-600 text-white rounded"
                                 >
-                                    <PlusCircle size={16} />
+                                    <PlusCircle size={16}/>
                                 </button>
-
                                 <button
                                     onClick={() => openAdjustModal(s, "remove")}
-                                    className="p-2 bg-red-600 text-white rounded hover:bg-red-700"
+                                    className="p-2 bg-red-600 text-white rounded"
                                 >
-                                    <MinusCircle size={16} />
+                                    <MinusCircle size={16}/>
                                 </button>
                             </td>
                         </tr>
@@ -262,7 +251,7 @@ export function StockManagement() {
                 </table>
             </div>
 
-            {/* MODAL */}
+            {/* --- MODAL --- */}
             {showAdjustModal && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
                     <div className="bg-white w-full max-w-md p-6 rounded-xl space-y-4">
@@ -272,8 +261,8 @@ export function StockManagement() {
                                 : "Stok Düşür"}
                         </h3>
 
-                        {/* Yeni stok ekleme modalı */}
-                        {!selectedStock && (
+                        {/* Yeni stok eklerken ilaç seçimi */}
+                        {!selectedStock && adjustType === "add" && (
                             <div>
                                 <label className="block text-sm mb-1 font-medium">İlaç Seç</label>
                                 <select
@@ -282,7 +271,6 @@ export function StockManagement() {
                                     onChange={(e) => setSelectedMedicationId(e.target.value)}
                                 >
                                     <option value="">Seçiniz</option>
-
                                     {allMedications.map((m) => (
                                         <option key={m.id} value={m.id}>
                                             {m.name} – {m.activeIngredient}

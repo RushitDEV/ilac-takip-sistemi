@@ -2,8 +2,10 @@
 
 namespace App\Controller\Api;
 
-use App\Repository\MedicationRepository;
-use App\Repository\StockRepository;
+use App\Entity\Medication;
+use App\Entity\Patient;
+use App\Entity\Stock;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
@@ -11,48 +13,44 @@ use Symfony\Component\Routing\Annotation\Route;
 #[Route('/api/dashboard')]
 class DashboardController extends AbstractController
 {
-    public function __construct(
-        private StockRepository      $stockRepo,
-        private MedicationRepository $medicationRepo,
-    ) {}
-
-    // -------------------------------------------------
-    //  DASHBOARD İSTATİSTİKLERİ
-    //  Frontend: GET /api/dashboard/stats
-    // -------------------------------------------------
-    #[Route('/stats', name: 'app_api_dashboard_stats', methods: ['GET'])]
-    public function stats(): JsonResponse
+    #[Route('/stats', methods: ['GET'])]
+    public function stats(EntityManagerInterface $em): JsonResponse
     {
-        $em = $this->stockRepo->getEntityManager();
+        // Toplam ilaç sayısı
+        $totalMedicines = $em->getRepository(Medication::class)->count([]);
 
-        // Toplam stok (kutu)
-        $totalStock = (int)$this->stockRepo->createQueryBuilder('s')
-            ->select('COALESCE(SUM(s.currentStock), 0)')
-            ->getQuery()
-            ->getSingleScalarResult();
+        // Toplam hasta sayısı
+        $totalPatients = $em->getRepository(Patient::class)->count([]);
 
-        // Düşük / kritik stok sayısı
-        $lowStockCount = (int)$this->stockRepo->createQueryBuilder('s')
+        // Düşük stok sayısı (NULL güvenli)
+        $lowStock = $em->getRepository(Stock::class)
+            ->createQueryBuilder('s')
             ->select('COUNT(s.id)')
-            ->where('s.currentStock <= s.minStock * 1.5')
+            ->where('s.currentStock IS NOT NULL')
+            ->andWhere('s.minStock IS NOT NULL')
+            ->andWhere('s.currentStock <= s.minStock')
             ->getQuery()
             ->getSingleScalarResult();
 
-        // Toplam stok değeri (₺)
-        $totalValue = (float)$em->createQuery(
-            'SELECT COALESCE(SUM(s.currentStock * m.price), 0)
-             FROM App\Entity\Stock s
-             JOIN s.medication m'
-        )->getSingleScalarResult();
-
-        // İlaç çeşidi
-        $medicationCount = $this->medicationRepo->count([]);
+        // Bugün eklenen ilaç — PostgreSQL uyumlu tarih karşılaştırması
+        $today = new \DateTime();
+        $todayAdded = $em->getRepository(Medication::class)
+            ->createQueryBuilder('m')
+            ->select('COUNT(m.id)')
+            ->where('m.expiryDate >= :start')
+            ->andWhere('m.expiryDate < :end')
+            ->setParameter('start', $today->format('Y-m-d 00:00:00'))
+            ->setParameter('end', $today->format('Y-m-d 23:59:59'))
+            ->getQuery()
+            ->getSingleScalarResult();
 
         return new JsonResponse([
-            'totalStock'      => $totalStock,
-            'lowStockCount'   => $lowStockCount,
-            'totalValue'      => $totalValue,
-            'medicationCount' => $medicationCount,
+            'totalMedicines' => (int)$totalMedicines,
+            'totalPatients' => (int)$totalPatients,
+            'lowStock' => (int)$lowStock,
+            'todayAdded' => (int)$todayAdded,
+            'pendingShipments' => 0,
+            'notifications' => 0
         ]);
     }
 }

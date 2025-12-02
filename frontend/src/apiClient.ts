@@ -1,4 +1,4 @@
-const TOKEN_KEY = "user_token";
+const TOKEN_KEY = "token";       // 🔥 DÜZELTİLDİ
 const USER_KEY = "current_user";
 
 interface ApiRequestOptions extends RequestInit {
@@ -47,7 +47,6 @@ export async function apiClient<T = any>(
         ...rest,
     });
 
-    // Token yoksa / yanlışsa backend 401 verir
     if (response.status === 401) {
         clearAuthData();
         throw new Error("JWT token geçersiz veya süresi dolmuş.");
@@ -62,7 +61,6 @@ export async function apiClient<T = any>(
         throw new Error(errorMsg);
     }
 
-    // response boşsa
     if (response.status === 204) return null as T;
 
     return response.json();

@@ -24,6 +24,8 @@ class StockController extends AbstractController
         $result = [];
 
         foreach ($stocks as $s) {
+            $m = $s->getMedication();
+
             $result[] = [
                 'id' => $s->getId(),
                 'currentStock' => $s->getCurrentStock(),
@@ -32,13 +34,18 @@ class StockController extends AbstractController
                 'lastRestock' => $s->getLastRestock()?->format('Y-m-d'),
                 'expiryDate' => $s->getExpiryDate()?->format('Y-m-d'),
                 'note' => $s->getNote(),
+
+                // 💥 Frontend’in beklediği ilaç bilgileri
                 'medication' => [
-                    'id' => $s->getMedication()->getId(),
-                    'name' => $s->getMedication()->getName(),
-                    'barcode' => $s->getMedication()->getBarcode(),
-                    'manufacturer' => $s->getMedication()->getManufacturer(),
-                    'activeIngredient' => $s->getMedication()->getActiveIngredient(),
-                    'price' => $s->getMedication()->getPrice(),
+                    'id' => $m->getId(),
+                    'name' => $m->getName(),
+                    'barcode' => $m->getBarcode(),
+                    'manufacturer' => $m->getManufacturer(),
+                    'activeIngredient' => $m->getActiveIngredient(),
+                    'price' => $m->getPrice(),
+
+                    // 💥 Eksikti: Frontend expiryDate istiyordu
+                    'expiryDate' => $m->getExpiryDate()?->format('Y-m-d'),
                 ],
             ];
         }
@@ -54,7 +61,7 @@ class StockController extends AbstractController
     {
         $data = json_decode($req->getContent(), true);
 
-        if (!isset($data['medicationId']) || !isset($data['amount'])) {
+        if (!isset($data['medicationId'], $data['amount'])) {
             return new JsonResponse(['error' => 'Eksik veri. (medicationId, amount)'], 400);
         }
 
@@ -63,24 +70,23 @@ class StockController extends AbstractController
             return new JsonResponse(['error' => 'İlaç bulunamadı'], 404);
         }
 
-        // Bu ilaç için stok oluşturulmuş mu?
         $stock = $repo->findOneBy(['medication' => $med]);
 
         if (!$stock) {
             $stock = new Stock();
             $stock->setMedication($med);
             $stock->setCurrentStock(0);
-            $stock->setMinStock(5);
-            $stock->setMaxStock(500);
+            $stock->setMinStock($data['minStock'] ?? 5);
+            $stock->setMaxStock($data['maxStock'] ?? 500);
+
             $em->persist($stock);
         }
 
         $amount = (int)$data['amount'];
-
         $stock->setCurrentStock($stock->getCurrentStock() + $amount);
         $stock->setLastRestock(new \DateTime());
 
-        if (isset($data['note'])) {
+        if (!empty($data['note'])) {
             $stock->setNote($data['note']);
         }
 
@@ -97,7 +103,7 @@ class StockController extends AbstractController
     {
         $data = json_decode($req->getContent(), true);
 
-        if (!isset($data['stockId']) || !isset($data['amount'])) {
+        if (!isset($data['stockId'], $data['amount'])) {
             return new JsonResponse(['error' => 'Eksik veri. (stockId, amount)'], 400);
         }
 
@@ -107,7 +113,6 @@ class StockController extends AbstractController
         }
 
         $amount = (int)$data['amount'];
-
         if ($amount <= 0) {
             return new JsonResponse(['error' => 'Miktar 0dan büyük olmalı'], 400);
         }
@@ -118,7 +123,7 @@ class StockController extends AbstractController
 
         $stock->setCurrentStock($stock->getCurrentStock() - $amount);
 
-        if (isset($data['note'])) {
+        if (!empty($data['note'])) {
             $stock->setNote($data['note']);
         }
 

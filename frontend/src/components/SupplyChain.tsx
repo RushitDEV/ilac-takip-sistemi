@@ -11,7 +11,7 @@ export function SupplyChain() {
         origin: "",
         destination: "",
         estimatedArrival: "",
-        quantity: 0
+        quantity: ""
     });
 
     const loadShipments = async () => {
@@ -20,16 +20,35 @@ export function SupplyChain() {
     };
 
     const loadMedications = async () => {
-        const meds = await apiClient("/api/medication");
+        const meds = await apiClient(API_ENDPOINTS.MEDICATION_LIST);
         setMedications(meds);
     };
 
     const createShipment = async (e: any) => {
         e.preventDefault();
+
+        if (!form.medicationId) {
+            alert("İlaç seçmelisin!");
+            return;
+        }
+        if (!form.quantity) {
+            alert("Miktar boş olamaz!");
+            return;
+        }
+
         await apiClient(API_ENDPOINTS.SHIPMENT_CREATE, {
             method: "POST",
-            data: form
+            data: {
+                medicationId: form.medicationId, // eski
+                supplier: form.supplier,
+                origin: form.origin,
+                destination: form.destination,
+                estimatedArrival: form.estimatedArrival,
+                quantity: form.quantity
+            }
+
         });
+
         alert("Sevkiyat oluşturuldu!");
         loadShipments();
     };
@@ -84,18 +103,21 @@ export function SupplyChain() {
                     placeholder="Tedarikçi"
                     onChange={(e) => setForm({ ...form, supplier: e.target.value })}
                 />
+
                 <input
                     type="text"
                     className="border p-2 w-full"
                     placeholder="Çıkış Noktası"
                     onChange={(e) => setForm({ ...form, origin: e.target.value })}
                 />
+
                 <input
                     type="text"
                     className="border p-2 w-full"
                     placeholder="Varış Noktası"
                     onChange={(e) => setForm({ ...form, destination: e.target.value })}
                 />
+
                 <input
                     type="date"
                     className="border p-2 w-full"
@@ -103,12 +125,13 @@ export function SupplyChain() {
                         setForm({ ...form, estimatedArrival: e.target.value })
                     }
                 />
+
                 <input
                     type="number"
                     className="border p-2 w-full"
                     placeholder="Miktar"
                     onChange={(e) =>
-                        setForm({ ...form, quantity: Number(e.target.value) })
+                        setForm({ ...form, quantity: e.target.value })
                     }
                 />
 
@@ -128,12 +151,19 @@ export function SupplyChain() {
                             <p>Kod: {s.shipmentCode}</p>
                             <p>Tedarikçi: {s.supplier}</p>
                             <p>Miktar: {s.quantity}</p>
-                            <p>Durum: <span className={`px-2 py-1 rounded ${statusColor(s.status)}`}>{s.status}</span></p>
+
+                            <p>
+                                Durum:{" "}
+                                <span className={`px-2 py-1 rounded ${statusColor(s.status)}`}>
+                                    {s.status}
+                                </span>
+                            </p>
+
                             <p>Konum: {s.currentLocation}</p>
                             <p>Varış: {s.estimatedArrival}</p>
 
                             <div className="flex gap-2 mt-3">
-                                {s.status !== "pending" ? null : (
+                                {s.status === "pending" && (
                                     <button
                                         onClick={() => updateStatus(s.id, "in_transit")}
                                         className="bg-blue-600 text-white px-3 py-1 rounded"
@@ -142,7 +172,7 @@ export function SupplyChain() {
                                     </button>
                                 )}
 
-                                {s.status !== "in_transit" ? null : (
+                                {s.status === "in_transit" && (
                                     <button
                                         onClick={() => updateStatus(s.id, "delivered")}
                                         className="bg-green-600 text-white px-3 py-1 rounded"

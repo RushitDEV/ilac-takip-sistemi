@@ -49,10 +49,30 @@ class ShipmentController extends AbstractController
     {
         $data = json_decode($req->getContent(), true);
 
-        $med = $em->getRepository(Medication::class)->find($data['medicationId']);
-        if (!$med)
-            return new JsonResponse(['error' => 'İlaç bulunamadı'], 404);
+        // ---- ID FORMAT DESTEĞİ ----
+        $medicationId = $data['medicationId']
+            ?? $data['medication_id']
+            ?? null;
 
+        if (!$medicationId) {
+            return new JsonResponse(['error' => 'İlaç ID eksik'], 400);
+        }
+
+        // ---- İLAÇ KONTROLÜ ----
+        $med = $em->getRepository(Medication::class)->find($medicationId);
+        if (!$med) {
+            return new JsonResponse(['error' => 'İlaç bulunamadı'], 404);
+        }
+
+        // ---- ZORUNLU ALAN KONTROLÜ ----
+        $required = ['supplier', 'origin', 'destination', 'estimatedArrival', 'quantity'];
+        foreach ($required as $field) {
+            if (!isset($data[$field]) || $data[$field] === "") {
+                return new JsonResponse(["error" => "$field eksik"], 400);
+            }
+        }
+
+        // ---- SEVKIYAT OLUŞTUR ----
         $shipment = new Shipment();
         $shipment->setMedication($med);
         $shipment->setShipmentCode("SHIP-" . strtoupper(substr(md5(uniqid()), 0, 8)));
@@ -62,7 +82,12 @@ class ShipmentController extends AbstractController
         $shipment->setCurrentLocation($data['origin']);
         $shipment->setQuantity($data['quantity']);
         $shipment->setStatus("pending");
-        $shipment->setEstimatedArrival(new \DateTime($data['estimatedArrival']));
+
+        try {
+            $shipment->setEstimatedArrival(new \DateTime($data['estimatedArrival']));
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Geçersiz tarih formatı'], 400);
+        }
 
         $em->persist($shipment);
         $em->flush();
@@ -76,14 +101,19 @@ class ShipmentController extends AbstractController
         $data = json_decode($req->getContent(), true);
         $shipment = $em->getRepository(Shipment::class)->find($id);
 
-        if (!$shipment)
+        if (!$shipment) {
             return new JsonResponse(['error' => 'Sevkiyat bulunamadı'], 404);
+        }
 
-        if (!in_array($data['status'], ['pending', 'in_transit', 'delivered']))
+        if (!isset($data['status']) || !in_array($data['status'], ['pending', 'in_transit', 'delivered'])) {
             return new JsonResponse(['error' => 'Geçersiz durum'], 400);
+        }
 
         $shipment->setStatus($data['status']);
-        $shipment->setCurrentLocation($data['currentLocation'] ?? $shipment->getCurrentLocation());
+
+        if (isset($data['currentLocation'])) {
+            $shipment->setCurrentLocation($data['currentLocation']);
+        }
 
         $em->flush();
 

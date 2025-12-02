@@ -17,6 +17,10 @@ export function PatientTracking() {
         birthDate: "",
     });
 
+    // Düzenleme modal
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editPatient, setEditPatient] = useState<any>(null);
+
     // Reçete modal
     const [selectedPatient, setSelectedPatient] = useState<any>(null);
     const [prescriptions, setPrescriptions] = useState<any[]>([]);
@@ -66,6 +70,45 @@ export function PatientTracking() {
     };
 
     // ------------------------------------------------------------
+    //  HASTAYI SİL
+    // ------------------------------------------------------------
+    const handleDeletePatient = async (id: string) => {
+        if (!confirm("Bu hastayı silmek istediğinize emin misiniz?")) return;
+
+        try {
+            await apiClient(API_ENDPOINTS.PATIENT_DETAIL(id), {
+                method: "DELETE",
+            });
+
+            loadPatients();
+        } catch (err: any) {
+            alert("Hata: " + err.message);
+        }
+    };
+
+    // ------------------------------------------------------------
+    //  HASTAYI DÜZENLE
+    // ------------------------------------------------------------
+    const openEditModal = (patient: any) => {
+        setEditPatient(patient);
+        setShowEditModal(true);
+    };
+
+    const handleUpdatePatient = async () => {
+        try {
+            await apiClient(API_ENDPOINTS.PATIENT_DETAIL(editPatient.id), {
+                method: "PUT",
+                data: editPatient,
+            });
+
+            setShowEditModal(false);
+            loadPatients();
+        } catch (err: any) {
+            alert("Hata: " + err.message);
+        }
+    };
+
+    // ------------------------------------------------------------
     //  HASTANIN REÇETELERİNİ YÜKLE
     // ------------------------------------------------------------
     const loadPrescriptions = async (patient: any) => {
@@ -82,7 +125,6 @@ export function PatientTracking() {
             alert("Reçeteler alınamadı: " + err.message);
         }
     };
-
 
     return (
         <div className="space-y-6">
@@ -125,13 +167,30 @@ export function PatientTracking() {
                             <td className="p-3">{p.tc}</td>
                             <td className="p-3">{p.gender}</td>
                             <td className="p-3">{p.birthDate}</td>
-                            <td className="p-3">
+
+                            <td className="p-3 flex gap-2">
+
                                 <button
                                     onClick={() => loadPrescriptions(p)}
                                     className="px-3 py-1 bg-green-600 text-white rounded-md"
                                 >
                                     Reçeteleri Gör
                                 </button>
+
+                                <button
+                                    onClick={() => openEditModal(p)}
+                                    className="px-3 py-1 bg-yellow-500 text-white rounded-md"
+                                >
+                                    Düzenle
+                                </button>
+
+                                <button
+                                    onClick={() => handleDeletePatient(p.id)}
+                                    className="px-3 py-1 bg-red-600 text-white rounded-md"
+                                >
+                                    Sil
+                                </button>
+
                             </td>
                         </tr>
                     ))}
@@ -139,9 +198,9 @@ export function PatientTracking() {
                 </table>
             )}
 
-            {/* ---------------------------------------------------- */}
-            {/* HASTA EKLEME MODALI */}
-            {/* ---------------------------------------------------- */}
+            {/* ----------------------------------------------------
+                HASTA EKLEME MODALI
+            ---------------------------------------------------- */}
             {showAddModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
                     <div className="bg-white p-6 rounded-xl w-96 space-y-4">
@@ -219,9 +278,87 @@ export function PatientTracking() {
                 </div>
             )}
 
-            {/* ---------------------------------------------------- */}
-            {/* REÇETE MODALI */}
-            {/* ---------------------------------------------------- */}
+            {/* ----------------------------------------------------
+                HASTA DÜZENLEME MODALI
+            ---------------------------------------------------- */}
+            {showEditModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+                    <div className="bg-white p-6 rounded-xl w-96 space-y-4">
+                        <h3 className="text-xl font-bold">Hasta Düzenle</h3>
+
+                        <input
+                            className="w-full border p-2 rounded"
+                            value={editPatient.name}
+                            onChange={(e) =>
+                                setEditPatient({ ...editPatient, name: e.target.value })
+                            }
+                        />
+                        <input
+                            className="w-full border p-2 rounded"
+                            value={editPatient.surname}
+                            onChange={(e) =>
+                                setEditPatient({
+                                    ...editPatient,
+                                    surname: e.target.value,
+                                })
+                            }
+                        />
+                        <input
+                            className="w-full border p-2 rounded"
+                            value={editPatient.tc}
+                            onChange={(e) =>
+                                setEditPatient({ ...editPatient, tc: e.target.value })
+                            }
+                        />
+
+                        <select
+                            className="w-full border p-2 rounded"
+                            value={editPatient.gender}
+                            onChange={(e) =>
+                                setEditPatient({
+                                    ...editPatient,
+                                    gender: e.target.value,
+                                })
+                            }
+                        >
+                            <option value="Erkek">Erkek</option>
+                            <option value="Kadın">Kadın</option>
+                        </select>
+
+                        <input
+                            type="date"
+                            className="w-full border p-2 rounded"
+                            value={editPatient.birthDate}
+                            onChange={(e) =>
+                                setEditPatient({
+                                    ...editPatient,
+                                    birthDate: e.target.value,
+                                })
+                            }
+                        />
+
+                        <div className="flex justify-end space-x-2">
+                            <button
+                                onClick={() => setShowEditModal(false)}
+                                className="px-4 py-2 bg-gray-400 text-white rounded-lg"
+                            >
+                                Kapat
+                            </button>
+
+                            <button
+                                onClick={handleUpdatePatient}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                            >
+                                Kaydet
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ----------------------------------------------------
+                REÇETE MODALI
+            ---------------------------------------------------- */}
             {showPrescriptionsModal && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
                     <div className="bg-white w-[500px] p-6 rounded-xl">

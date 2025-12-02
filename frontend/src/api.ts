@@ -22,6 +22,11 @@ export const API_ENDPOINTS = {
     PATIENT_DETAIL: (id: string) => `${BASE_URL}/patient/${id}`,
     PATIENT_UPDATE: (id: string) => `${BASE_URL}/patient/${id}`,
     PATIENT_DELETE: (id: string) => `${BASE_URL}/patient/${id}`,
+    // PATIENT TRACKING (Eczacı Paneli)
+    PATIENT_TRACKING_LIST: `${BASE_URL}/patient-tracking/patients`,
+    PATIENT_PRESCRIPTIONS: (id: number) =>
+        `${BASE_URL}/patient-tracking/${id}/prescriptions`,
+
 
     // PRESCRIPTIONS (Hasta Paneli)
     PRESCRIPTIONS: `${BASE_URL}/prescription`,

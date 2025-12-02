@@ -28,11 +28,11 @@ interface StockItem {
 
 export function StockManagement() {
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState<'all' | 'good' | 'low' | 'critical'>('all');
+    const [filterStatus, setFilterStatus] =
+        useState<'all' | 'good' | 'low' | 'critical'>('all');
     const [stocks, setStocks] = useState<StockItem[]>([]);
 
     const [allMedications, setAllMedications] = useState<any[]>([]);
-
     const [showAdjustModal, setShowAdjustModal] = useState(false);
     const [adjustType, setAdjustType] = useState<"add" | "remove">("add");
     const [adjustAmount, setAdjustAmount] = useState<string>("");
@@ -126,15 +126,6 @@ export function StockManagement() {
         return matchesSearch && matchesFilter;
     });
 
-    const totalStock = stocks.reduce((sum, med) => sum + med.stock, 0);
-    const lowStockCount = stocks.filter(
-        (med) => med.status === 'low' || med.status === 'critical'
-    ).length;
-    const totalValue = stocks.reduce(
-        (sum, med) => sum + med.stock * med.price,
-        0
-    );
-
     const openAdjustModal = (stock: StockItem | null, type: "add" | "remove") => {
         setSelectedStock(stock);
         setAdjustType(type);
@@ -198,6 +189,8 @@ export function StockManagement() {
 
     return (
         <div className="max-w-7xl mx-auto">
+
+            {/* ÜST BAR */}
             <div className="flex justify-between items-center mb-6 mt-4">
                 <h2 className="text-2xl font-bold text-gray-900">Stok Yönetimi</h2>
 
@@ -210,12 +203,66 @@ export function StockManagement() {
                 </button>
             </div>
 
-            {/* mevcut tablo ve modal kodların HİÇ DEĞİŞMİYOR */}
-            {/* sadece yukarıdaki buton + ilaç seçme özelliği eklendi */}
+            {/* ⭐⭐⭐ STOK TABLOSU AŞAĞIDA ⭐⭐⭐ */}
+            <div className="bg-white rounded-xl shadow p-4">
+                <table className="w-full text-left">
+                    <thead>
+                    <tr className="border-b text-gray-600">
+                        <th className="py-2">İlaç</th>
+                        <th>Barkod</th>
+                        <th>Üretici</th>
+                        <th>Etken Madde</th>
+                        <th>Stok</th>
+                        <th>Durum</th>
+                        <th>İşlem</th>
+                    </tr>
+                    </thead>
 
-            {/* --- BURAYA KADARKİ TABLON KALACAK --- */}
+                    <tbody>
+                    {filteredMedicines.map((s) => (
+                        <tr key={s.id} className="border-b">
+                            <td className="py-2 font-semibold">{s.name}</td>
+                            <td>{s.barcode}</td>
+                            <td>{s.manufacturer}</td>
+                            <td>{s.activeIngredient}</td>
+                            <td>{s.stock}</td>
 
-            {/* Modal */}
+                            <td>
+                                {s.status === "critical" && (
+                                    <span className="text-red-600 font-bold flex items-center gap-1">
+                                        <AlertTriangle size={16} /> Kritik
+                                    </span>
+                                )}
+                                {s.status === "low" && (
+                                    <span className="text-yellow-600 font-bold">Düşük</span>
+                                )}
+                                {s.status === "good" && (
+                                    <span className="text-green-600 font-bold">İyi</span>
+                                )}
+                            </td>
+
+                            <td className="flex gap-2 py-2">
+                                <button
+                                    onClick={() => openAdjustModal(s, "add")}
+                                    className="p-2 bg-green-600 text-white rounded hover:bg-green-700"
+                                >
+                                    <PlusCircle size={16} />
+                                </button>
+
+                                <button
+                                    onClick={() => openAdjustModal(s, "remove")}
+                                    className="p-2 bg-red-600 text-white rounded hover:bg-red-700"
+                                >
+                                    <MinusCircle size={16} />
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* MODAL */}
             {showAdjustModal && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
                     <div className="bg-white w-full max-w-md p-6 rounded-xl space-y-4">
@@ -225,7 +272,7 @@ export function StockManagement() {
                                 : "Stok Düşür"}
                         </h3>
 
-                        {/* Yeni stok eklerken ilaç seçimi */}
+                        {/* Yeni stok ekleme modalı */}
                         {!selectedStock && (
                             <div>
                                 <label className="block text-sm mb-1 font-medium">İlaç Seç</label>

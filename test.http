@@ -1,7 +1,61 @@
+### 1) Login olup token al
 POST http://localhost/api/auth/login
 Content-Type: application/json
 
 {
-    "email": "harun@example.com",
+    "email": "admin@ilac.com",
     "password": "123456"
+}
+
+> {%
+    try {
+        // JetBrains body'yi direkt JS object olarak veriyor
+        let json = response.body;
+
+        client.log("GELEN BODY: " + JSON.stringify(json));
+
+        if (json && json.token) {
+            client.global.set("token", json.token);
+            client.log("TOKEN KAYDEDILDI ✔: " + json.token);
+        } else {
+            client.log("TOKEN BULUNAMADI ❌");
+        }
+    } catch (e) {
+        client.log("HATA ❌: " + e);
+        client.log("RAW BODY: " + response.body);
+    }
+%}
+
+
+
+###
+
+### 2) Stok Listele
+GET http://localhost/api/stock
+Authorization: Bearer {{token}}
+
+###
+
+### 3) Stok Ekle
+POST http://localhost/api/stock/add
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "medicationId": 1,
+    "quantity": 5,
+    "note": "HTTP test add"
+}
+
+###
+
+### 4) Stok Azalt
+POST http://localhost/api/stock/remove
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "medicationId": 1,
+    "quantity": 2,
+    "note": "HTTP test remove"
 }

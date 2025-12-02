@@ -1,199 +1,232 @@
-import { useState, useEffect } from 'react';
-import { Package, AlertTriangle, TrendingUp, Search, Filter } from 'lucide-react';
+import { useEffect, useState } from "react";
 import { apiClient } from "../apiClient";
 import { API_ENDPOINTS } from "../api";
+import { Plus, Minus, AlertTriangle } from "lucide-react";
 
 export function StockManagement() {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState('all');
     const [stocks, setStocks] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
-    // STATUS hesaplama
-    const calculateStatus = (current: number, min: number) => {
-        if (current <= min) return "critical";
-        if (current <= min * 1.5) return "low";
-        return "good";
-    };
+    // Modal State
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [showRemoveModal, setShowRemoveModal] = useState(false);
 
-    // Backend'den stok çekme
-    const loadStock = async () => {
+    const [selectedStock, setSelectedStock] = useState<any>(null);
+    const [amount, setAmount] = useState(0);
+
+    // --------------------------------------------
+    // STOKLARI YÜKLE
+    // --------------------------------------------
+    const loadStocks = async () => {
         try {
             const data = await apiClient(API_ENDPOINTS.STOCK_LIST);
-
-            const mapped = data.map((item: any) => ({
-                id: item.id,
-                name: item.medication.name,
-                barcode: item.medication.barcode,
-                manufacturer: item.medication.manufacturer,
-                activeIngredient: item.medication.activeIngredient,
-                stock: item.currentStock,
-                minStock: item.minStock,
-                maxStock: item.maxStock,
-                lastRestocked: item.lastRestock,
-                expiryDate: "—", // Medication’da SKT yoksa sabit gösterilir
-                price: item.medication.price ?? 0,
-                status: calculateStatus(item.currentStock, item.minStock),
-            }));
-
-            setStocks(mapped);
+            setStocks(data || []);
         } catch (err: any) {
-            alert("Stok listesi yüklenemedi: " + err.message);
+            setError(err.message || "Stoklar yüklenemedi.");
+        } finally {
+            setLoading(false);
         }
     };
 
     useEffect(() => {
-        loadStock();
+        loadStocks();
     }, []);
 
-    const filteredMedicines = stocks.filter((med) => {
-        const matchesSearch =
-            med.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            med.barcode.includes(searchTerm);
-        const matchesFilter =
-            filterStatus === 'all' || med.status === filterStatus;
-        return matchesSearch && matchesFilter;
-    });
+    // --------------------------------------------
+    // STOK EKLE
+    // --------------------------------------------
+    const handleAddStock = async () => {
+        try {
+            await apiClient(API_ENDPOINTS.STOCK_ADD, {
+                method: "POST",
+                data: {
+                    medicationId: selectedStock.medication.id,
+                    amount: amount,
+                    minStock: selectedStock.minStock,
+                    maxStock: selectedStock.maxStock
+                }
+            });
 
-    const totalStock = stocks.reduce((sum, med) => sum + med.stock, 0);
-    const lowStockCount = stocks.filter((med) => med.status === 'low' || med.status === 'critical').length;
-    const totalValue = stocks.reduce((sum, med) => sum + med.stock * med.price, 0);
+            setShowAddModal(false);
+            setAmount(0);
+            loadStocks();
+        } catch (err: any) {
+            alert("Hata: " + err.message);
+        }
+    };
+
+    // --------------------------------------------
+    // STOK AZALT
+    // --------------------------------------------
+    const handleRemoveStock = async () => {
+        try {
+            await apiClient(API_ENDPOINTS.STOCK_REMOVE, {
+                method: "POST",
+                data: {
+                    stockId: selectedStock.id,
+                    amount: amount,
+                }
+            });
+
+            setShowRemoveModal(false);
+            setAmount(0);
+            loadStocks();
+        } catch (err: any) {
+            alert("Hata: " + err.message);
+        }
+    };
+
+    // --------------------------------------------
+    // DURUM RENKLERİ
+    // --------------------------------------------
+    const getStatus = (s: any) => {
+        if (s.currentStock === 0) return { label: "Tükendi", color: "text-red-600" };
+        if (s.currentStock <= s.minStock) return { label: "Düşük", color: "text-orange-500" };
+        return { label: "Normal", color: "text-green-600" };
+    };
 
     return (
-        <div className="max-w-7xl space-y-6">
+        <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Stok Yönetimi</h2>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-2">
-                        <Package className="w-5 h-5 text-blue-600" />
-                        <p className="text-sm text-gray-600">Toplam Stok</p>
-                    </div>
-                    <p className="text-gray-900">{totalStock} kutu</p>
-                </div>
+            {loading && <p>Yükleniyor...</p>}
+            {error && <p className="text-red-500">{error}</p>}
 
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-2">
-                        <AlertTriangle className="w-5 h-5 text-red-600" />
-                        <p className="text-sm text-gray-600">Düşük Stok</p>
-                    </div>
-                    <p className="text-gray-900">{lowStockCount} ilaç</p>
-                </div>
+            {/* TABLO */}
+            <table className="w-full border rounded-lg">
+                <thead>
+                <tr className="bg-gray-100">
+                    <th className="p-3">İlaç Adı</th>
+                    <th className="p-3">Üretici</th>
+                    <th className="p-3">Stok</th>
+                    <th className="p-3">Fiyat</th>
+                    <th className="p-3">Durum</th>
+                    <th className="p-3">İşlem</th>
+                </tr>
+                </thead>
 
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-2">
-                        <TrendingUp className="w-5 h-5 text-green-600" />
-                        <p className="text-sm text-gray-600">Toplam Değer</p>
-                    </div>
-                    <p className="text-gray-900">₺{totalValue.toFixed(2)}</p>
-                </div>
+                <tbody>
+                {stocks.map((s: any) => {
+                    const status = getStatus(s);
 
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-2">
-                        <Package className="w-5 h-5 text-purple-600" />
-                        <p className="text-sm text-gray-600">İlaç Çeşidi</p>
-                    </div>
-                    <p className="text-gray-900">{stocks.length}</p>
-                </div>
-            </div>
+                    return (
+                        <tr key={s.id} className="border-t">
+                            <td className="p-3">{s.medication.name}</td>
+                            <td className="p-3">{s.medication.manufacturer}</td>
+                            <td className="p-3">{s.currentStock}</td>
+                            <td className="p-3">{s.medication.price} ₺</td>
 
-            {/* Table */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                            <td className={`p-3 font-semibold ${status.color}`}>
+                                {status.label}
+                            </td>
 
-                {/* Search */}
-                <div className="mb-6">
-                    <h2 className="text-gray-900 mb-4">Stok Yönetimi</h2>
-                    <div className="flex gap-4">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                            <input
-                                type="text"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="İlaç adı veya barkod ile ara..."
-                                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg"
-                            />
-                        </div>
+                            <td className="p-3 flex gap-2">
+                                <button
+                                    className="px-3 py-1 bg-green-600 text-white rounded-md flex items-center gap-1"
+                                    onClick={() => {
+                                        setSelectedStock(s);
+                                        setShowAddModal(true);
+                                    }}
+                                >
+                                    <Plus className="w-4 h-4" /> Ekle
+                                </button>
 
-                        <div className="flex items-center gap-2">
-                            <Filter className="w-5 h-5 text-gray-600" />
-                            <select
-                                value={filterStatus}
-                                onChange={(e) => setFilterStatus(e.target.value)}
-                                className="px-4 py-3 border border-gray-300 rounded-lg"
-                            >
-                                <option value="all">Tüm Durumlar</option>
-                                <option value="good">İyi</option>
-                                <option value="low">Düşük</option>
-                                <option value="critical">Kritik</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Table */}
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                        <tr className="border-b border-gray-200">
-                            <th className="text-left py-3 px-4 text-sm text-gray-700">İlaç Adı</th>
-                            <th className="text-left py-3 px-4 text-sm text-gray-700">Barkod</th>
-                            <th className="text-left py-3 px-4 text-sm text-gray-700">Üretici</th>
-                            <th className="text-left py-3 px-4 text-sm text-gray-700">Stok</th>
-                            <th className="text-left py-3 px-4 text-sm text-gray-700">SKT</th>
-                            <th className="text-left py-3 px-4 text-sm text-gray-700">Fiyat</th>
-                            <th className="text-left py-3 px-4 text-sm text-gray-700">Durum</th>
-                            <th className="text-left py-3 px-4 text-sm text-gray-700">İşlem</th>
+                                <button
+                                    className="px-3 py-1 bg-red-600 text-white rounded-md flex items-center gap-1"
+                                    onClick={() => {
+                                        setSelectedStock(s);
+                                        setShowRemoveModal(true);
+                                    }}
+                                >
+                                    <Minus className="w-4 h-4" /> Azalt
+                                </button>
+                            </td>
                         </tr>
-                        </thead>
+                    );
+                })}
 
-                        <tbody>
-                        {filteredMedicines.map((medicine) => (
-                            <tr key={medicine.id} className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="py-4 px-4">
-                                    <p className="text-sm text-gray-900">{medicine.name}</p>
-                                    <p className="text-xs text-gray-600">{medicine.activeIngredient}</p>
-                                </td>
+                {stocks.length === 0 && !loading && (
+                    <tr>
+                        <td className="p-3" colSpan={6}>Hiç stok yok.</td>
+                    </tr>
+                )}
+                </tbody>
+            </table>
 
-                                <td className="py-4 px-4 text-sm text-gray-900">{medicine.barcode}</td>
-                                <td className="py-4 px-4 text-sm text-gray-600">{medicine.manufacturer}</td>
+            {/* --------------------------------------------------------- */}
+            {/* STOK EKLE MODALI */}
+            {/* --------------------------------------------------------- */}
+            {showAddModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+                    <div className="bg-white p-6 rounded-xl w-96 space-y-4">
+                        <h3 className="text-xl font-bold">Stok Ekle</h3>
 
-                                <td className="py-4 px-4">
-                                    <p className="text-sm text-gray-900">{medicine.stock} kutu</p>
-                                </td>
+                        <p><b>İlaç:</b> {selectedStock.medication.name}</p>
 
-                                <td className="py-4 px-4 text-sm text-gray-600">{medicine.expiryDate}</td>
-                                <td className="py-4 px-4 text-sm text-gray-900">₺{medicine.price}</td>
+                        <input
+                            type="number"
+                            className="w-full border p-2 rounded"
+                            placeholder="Eklenecek miktar"
+                            value={amount}
+                            onChange={(e) => setAmount(Number(e.target.value))}
+                        />
 
-                                <td className="py-4 px-4">
-                    <span
-                        className={`px-3 py-1 rounded-full text-xs ${
-                            medicine.status === "good"
-                                ? "bg-green-100 text-green-700"
-                                : medicine.status === "low"
-                                    ? "bg-yellow-100 text-yellow-700"
-                                    : "bg-red-100 text-red-700"
-                        }`}
-                    >
-                      {medicine.status === "good"
-                          ? "İyi"
-                          : medicine.status === "low"
-                              ? "Düşük"
-                              : "Kritik"}
-                    </span>
-                                </td>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                className="px-4 py-2 bg-gray-500 text-white rounded-lg"
+                                onClick={() => setShowAddModal(false)}
+                            >
+                                İptal
+                            </button>
 
-                                <td className="py-4 px-4">
-                                    <button className="text-sm text-blue-600 hover:text-blue-700">
-                                        Detay
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-
-                    </table>
+                            <button
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg"
+                                onClick={handleAddStock}
+                            >
+                                Kaydet
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {/* --------------------------------------------------------- */}
+            {/* STOK AZALT MODALI */}
+            {/* --------------------------------------------------------- */}
+            {showRemoveModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+                    <div className="bg-white p-6 rounded-xl w-96 space-y-4">
+                        <h3 className="text-xl font-bold">Stok Azalt</h3>
+
+                        <p><b>İlaç:</b> {selectedStock.medication.name}</p>
+
+                        <input
+                            type="number"
+                            className="w-full border p-2 rounded"
+                            placeholder="Azaltılacak miktar"
+                            value={amount}
+                            onChange={(e) => setAmount(Number(e.target.value))}
+                        />
+
+                        <div className="flex justify-end gap-2">
+                            <button
+                                className="px-4 py-2 bg-gray-500 text-white rounded-lg"
+                                onClick={() => setShowRemoveModal(false)}
+                            >
+                                İptal
+                            </button>
+
+                            <button
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg"
+                                onClick={handleRemoveStock}
+                            >
+                                Azalt
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

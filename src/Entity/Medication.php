@@ -28,6 +28,14 @@ class Medication
     #[ORM\Column(length: 200)]
     private ?string $manufacturer = null;
 
+    // 🌟 EKLEDİK: Etkin madde
+    #[ORM\Column(length: 200, nullable: true)]
+    private ?string $activeIngredient = null;
+
+    // 🌟 EKLEDİK: Fiyat (toplam stok değerinde kullanacağız)
+    #[ORM\Column(type: "float", nullable: true)]
+    private ?float $price = null;
+
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $imageUrl = null;
 
@@ -55,6 +63,28 @@ class Medication
 
     public function getManufacturer(): ?string { return $this->manufacturer; }
     public function setManufacturer(string $manufacturer): self { $this->manufacturer = $manufacturer; return $this; }
+
+    public function getActiveIngredient(): ?string
+    {
+        return $this->activeIngredient;
+    }
+
+    public function setActiveIngredient(?string $activeIngredient): self
+    {
+        $this->activeIngredient = $activeIngredient;
+        return $this;
+    }
+
+    public function getPrice(): ?float
+    {
+        return $this->price;
+    }
+
+    public function setPrice(?float $price): self
+    {
+        $this->price = $price;
+        return $this;
+    }
 
     public function getImageUrl(): ?string { return $this->imageUrl; }
     public function setImageUrl(?string $url): self { $this->imageUrl = $url; return $this; }

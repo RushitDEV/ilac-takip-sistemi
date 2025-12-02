@@ -3,6 +3,7 @@
 namespace App\Controller\Api;
 
 use App\Entity\Stock;
+use App\Entity\Medication;
 use App\Repository\StockRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -13,9 +14,9 @@ use Symfony\Component\Routing\Annotation\Route;
 #[Route('/api/stock')]
 class StockController extends AbstractController
 {
-    // -------------------------------------------------------
-    //  STOK LİSTELEME  (GET /api/stock)
-    // -------------------------------------------------------
+    // ------------------------------------------------------
+    //  STOK LİSTELEME (GET /api/stock)
+    // ------------------------------------------------------
     #[Route('', methods: ['GET'])]
     public function list(StockRepository $repo): JsonResponse
     {
@@ -23,23 +24,21 @@ class StockController extends AbstractController
         $result = [];
 
         foreach ($stocks as $s) {
-            $med = $s->getMedication();
-
             $result[] = [
                 'id' => $s->getId(),
                 'currentStock' => $s->getCurrentStock(),
                 'minStock' => $s->getMinStock(),
                 'maxStock' => $s->getMaxStock(),
                 'lastRestock' => $s->getLastRestock()?->format('Y-m-d'),
-
-                // FRONTEND'İN BEKLEDİĞİ MEDICATION ALANI
+                'expiryDate' => $s->getExpiryDate()?->format('Y-m-d'),
+                'note' => $s->getNote(),
                 'medication' => [
-                    'id' => $med->getId(),
-                    'name' => $med->getName(),
-                    'barcode' => $med->getBarcode(),
-                    'manufacturer' => $med->getManufacturer(),
-                    'activeIngredient' => $med->getActiveIngredient(),
-                    'price' => $med->getPrice(), // Toplam değer hesabı için
+                    'id' => $s->getMedication()->getId(),
+                    'name' => $s->getMedication()->getName(),
+                    'barcode' => $s->getMedication()->getBarcode(),
+                    'manufacturer' => $s->getMedication()->getManufacturer(),
+                    'activeIngredient' => $s->getMedication()->getActiveIngredient(),
+                    'price' => $s->getMedication()->getPrice(),
                 ],
             ];
         }
@@ -47,52 +46,59 @@ class StockController extends AbstractController
         return new JsonResponse($result);
     }
 
-    // -------------------------------------------------------
-    //  STOK ARTTIRMA  (POST /api/stock/add)
-    //  FRONTEND: STOCK_ADD → { stockId, amount, note }
-    // -------------------------------------------------------
+    // ------------------------------------------------------
+    //  STOK EKLEME (POST /api/stock/add)
+    // ------------------------------------------------------
     #[Route('/add', methods: ['POST'])]
     public function add(Request $req, EntityManagerInterface $em, StockRepository $repo): JsonResponse
     {
         $data = json_decode($req->getContent(), true);
 
-        // stockId kontrolü
-        if (empty($data['stockId'])) {
-            return new JsonResponse(['error' => 'stockId gerekli'], 400);
+        if (!isset($data['medicationId']) || !isset($data['amount'])) {
+            return new JsonResponse(['error' => 'Eksik veri. (medicationId, amount)'], 400);
         }
 
-        $stock = $repo->find($data['stockId']);
+        $med = $em->getRepository(Medication::class)->find($data['medicationId']);
+        if (!$med) {
+            return new JsonResponse(['error' => 'İlaç bulunamadı'], 404);
+        }
+
+        // Bu ilaç için stok oluşturulmuş mu?
+        $stock = $repo->findOneBy(['medication' => $med]);
+
         if (!$stock) {
-            return new JsonResponse(['error' => 'Stok bulunamadı'], 404);
+            $stock = new Stock();
+            $stock->setMedication($med);
+            $stock->setCurrentStock(0);
+            $stock->setMinStock(5);
+            $stock->setMaxStock(500);
+            $em->persist($stock);
         }
 
-        $amount = (int)($data['amount'] ?? 0);
-        if ($amount <= 0) {
-            return new JsonResponse(['error' => 'Geçersiz miktar'], 400);
-        }
-
-        // Not alanını şimdilik loglamıyoruz, istersen ileride StockMovement tablosuna ekleriz
-        // $note = $data['note'] ?? null;
+        $amount = (int)$data['amount'];
 
         $stock->setCurrentStock($stock->getCurrentStock() + $amount);
         $stock->setLastRestock(new \DateTime());
 
+        if (isset($data['note'])) {
+            $stock->setNote($data['note']);
+        }
+
         $em->flush();
 
-        return new JsonResponse(['message' => 'Stok artırıldı']);
+        return new JsonResponse(['message' => 'Stok başarıyla artırıldı']);
     }
 
-    // -------------------------------------------------------
-    //  STOK AZALTMA  (POST /api/stock/remove)
-    //  FRONTEND: STOCK_REMOVE → { stockId, amount, note }
-    // -------------------------------------------------------
+    // ------------------------------------------------------
+    //  STOK AZALTMA (POST /api/stock/remove)
+    // ------------------------------------------------------
     #[Route('/remove', methods: ['POST'])]
     public function remove(Request $req, EntityManagerInterface $em, StockRepository $repo): JsonResponse
     {
         $data = json_decode($req->getContent(), true);
 
-        if (empty($data['stockId'])) {
-            return new JsonResponse(['error' => 'stockId gerekli'], 400);
+        if (!isset($data['stockId']) || !isset($data['amount'])) {
+            return new JsonResponse(['error' => 'Eksik veri. (stockId, amount)'], 400);
         }
 
         $stock = $repo->find($data['stockId']);
@@ -100,9 +106,10 @@ class StockController extends AbstractController
             return new JsonResponse(['error' => 'Stok bulunamadı'], 404);
         }
 
-        $amount = (int)($data['amount'] ?? 0);
+        $amount = (int)$data['amount'];
+
         if ($amount <= 0) {
-            return new JsonResponse(['error' => 'Geçersiz miktar'], 400);
+            return new JsonResponse(['error' => 'Miktar 0dan büyük olmalı'], 400);
         }
 
         if ($stock->getCurrentStock() < $amount) {
@@ -110,8 +117,13 @@ class StockController extends AbstractController
         }
 
         $stock->setCurrentStock($stock->getCurrentStock() - $amount);
+
+        if (isset($data['note'])) {
+            $stock->setNote($data['note']);
+        }
+
         $em->flush();
 
-        return new JsonResponse(['message' => 'Stok azaltıldı']);
+        return new JsonResponse(['message' => 'Stok başarıyla azaltıldı']);
     }
 }

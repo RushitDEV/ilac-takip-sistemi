@@ -2,39 +2,40 @@
 
 namespace App\Entity;
 
+use App\Repository\StockRepository;
 use Doctrine\ORM\Mapping as ORM;
-use App\Entity\Medication;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: StockRepository::class)]
 class Stock
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue(strategy: "CUSTOM")]
-    #[ORM\CustomIdGenerator(class: "Ramsey\Uuid\Doctrine\UuidGenerator")]
-    #[ORM\Column(type: "uuid")]
-    private ?string $id = null;
+    #[ORM\GeneratedValue]
+    #[ORM\Column]
+    private ?int $id = null;
 
+    #[ORM\OneToOne(inversedBy: "stock")]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Medication $medication = null;
 
+    #[ORM\Column(type: 'integer')]
+    private int $currentStock = 0;
 
-    #[ORM\ManyToOne(targetEntity: Medication::class)]
-    #[ORM\JoinColumn(nullable: false, onDelete: "CASCADE")]
-    private $medication;
+    #[ORM\Column(type: 'integer')]
+    private int $minStock = 5;
 
-    #[ORM\Column(type: "integer")]
-    private ?int $currentStock;
+    #[ORM\Column(type: 'integer')]
+    private int $maxStock = 500;
 
-    #[ORM\Column(type: "integer")]
-    private ?int $minStock;
+    #[ORM\Column(type: 'datetime', nullable: true)]
+    private ?\DateTimeInterface $lastRestock = null;
 
-    #[ORM\Column(type: "integer")]
-    private ?int $maxStock;
+    #[ORM\Column(type: 'date', nullable: true)]
+    private ?\DateTimeInterface $expiryDate = null;
 
-    #[ORM\Column(type: "date", nullable: true)]
-    private ?\DateTimeInterface $lastRestock;
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private ?string $note = null;
 
-    // --- GETTERS & SETTERS START ---
-
-    public function getId()
+    public function getId(): ?int
     {
         return $this->id;
     }
@@ -50,36 +51,36 @@ class Stock
         return $this;
     }
 
-    public function getCurrentStock(): ?int
+    public function getCurrentStock(): int
     {
         return $this->currentStock;
     }
 
-    public function setCurrentStock(int $value): self
+    public function setCurrentStock(int $currentStock): self
     {
-        $this->currentStock = $value;
+        $this->currentStock = $currentStock;
         return $this;
     }
 
-    public function getMinStock(): ?int
+    public function getMinStock(): int
     {
         return $this->minStock;
     }
 
-    public function setMinStock(int $value): self
+    public function setMinStock(int $minStock): self
     {
-        $this->minStock = $value;
+        $this->minStock = $minStock;
         return $this;
     }
 
-    public function getMaxStock(): ?int
+    public function getMaxStock(): int
     {
         return $this->maxStock;
     }
 
-    public function setMaxStock(int $value): self
+    public function setMaxStock(int $maxStock): self
     {
-        $this->maxStock = $value;
+        $this->maxStock = $maxStock;
         return $this;
     }
 
@@ -88,11 +89,31 @@ class Stock
         return $this->lastRestock;
     }
 
-    public function setLastRestock(?\DateTimeInterface $date): self
+    public function setLastRestock(?\DateTimeInterface $lastRestock): self
     {
-        $this->lastRestock = $date;
+        $this->lastRestock = $lastRestock;
         return $this;
     }
 
-    // --- GETTERS & SETTERS END ---
+    public function getExpiryDate(): ?\DateTimeInterface
+    {
+        return $this->expiryDate;
+    }
+
+    public function setExpiryDate(?\DateTimeInterface $expiryDate): self
+    {
+        $this->expiryDate = $expiryDate;
+        return $this;
+    }
+
+    public function getNote(): ?string
+    {
+        return $this->note;
+    }
+
+    public function setNote(?string $note): self
+    {
+        $this->note = $note;
+        return $this;
+    }
 }

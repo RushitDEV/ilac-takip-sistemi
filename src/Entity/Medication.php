@@ -3,92 +3,111 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use App\Entity\Stock;
 
 #[ORM\Entity]
 class Medication
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue(strategy: "CUSTOM")]
-    #[ORM\CustomIdGenerator(class: "Ramsey\Uuid\Doctrine\UuidGenerator")]
-    #[ORM\Column(type: "uuid")]
-    private ?string $id = null;
+    #[ORM\GeneratedValue(strategy: "AUTO")]
+    #[ORM\Column(type: "integer")]
+    private ?int $id = null;
 
-    #[ORM\Column(length: 50, unique: true)]
-    private ?string $barcode = null;
-
-    #[ORM\Column(length: 200)]
-    private ?string $name = null;
-
-    #[ORM\Column(type: "text", nullable: true)]
-    private ?string $description = null;
+    #[ORM\Column(length: 255)]
+    private string $name;
 
     #[ORM\Column(length: 100)]
-    private ?string $type = null;
+    private string $barcode;
 
-    #[ORM\Column(length: 200)]
-    private ?string $manufacturer = null;
+    #[ORM\Column(length: 255)]
+    private string $manufacturer;
 
-    // 🌟 EKLEDİK: Etkin madde
-    #[ORM\Column(length: 200, nullable: true)]
-    private ?string $activeIngredient = null;
+    #[ORM\Column(length: 255)]
+    private string $activeIngredient;
 
-    // 🌟 EKLEDİK: Fiyat (toplam stok değerinde kullanacağız)
-    #[ORM\Column(type: "float", nullable: true)]
-    private ?float $price = null;
+    #[ORM\Column(type: "float")]
+    private float $price = 0;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $imageUrl = null;
+    #[ORM\Column(type: "date", nullable: true)]
+    private ?\DateTimeInterface $expiryDate = null;
 
-    #[ORM\Column(type:"datetime")]
-    private ?\DateTimeInterface $createdAt = null;
+    // --- EN ÖNEMLİ DÜZELTME ---
+    #[ORM\OneToOne(mappedBy: "medication", cascade: ["persist", "remove"])]
+    private ?Stock $stock = null;
+    // --------------------------------
 
-    public function __construct()
+    public function getId(): ?int
     {
-        $this->createdAt = new \DateTime();
+        return $this->id;
     }
 
-    public function getId(): ?string { return $this->id; }
-
-    public function getBarcode(): ?string { return $this->barcode; }
-    public function setBarcode(?string $barcode): self { $this->barcode = $barcode; return $this; }
-
-    public function getName(): ?string { return $this->name; }
-    public function setName(string $name): self { $this->name = $name; return $this; }
-
-    public function getDescription(): ?string { return $this->description; }
-    public function setDescription(?string $description): self { $this->description = $description; return $this; }
-
-    public function getType(): ?string { return $this->type; }
-    public function setType(string $type): self { $this->type = $type; return $this; }
-
-    public function getManufacturer(): ?string { return $this->manufacturer; }
-    public function setManufacturer(string $manufacturer): self { $this->manufacturer = $manufacturer; return $this; }
-
-    public function getActiveIngredient(): ?string
+    public function getName(): string
     {
-        return $this->activeIngredient;
+        return $this->name;
     }
-
-    public function setActiveIngredient(?string $activeIngredient): self
+    public function setName(string $name): self
     {
-        $this->activeIngredient = $activeIngredient;
+        $this->name = $name;
         return $this;
     }
 
-    public function getPrice(): ?float
+    public function getBarcode(): string
+    {
+        return $this->barcode;
+    }
+    public function setBarcode(string $barcode): self
+    {
+        $this->barcode = $barcode;
+        return $this;
+    }
+
+    public function getManufacturer(): string
+    {
+        return $this->manufacturer;
+    }
+    public function setManufacturer(string $manufacturer): self
+    {
+        $this->manufacturer = $manufacturer;
+        return $this;
+    }
+
+    public function getActiveIngredient(): string
+    {
+        return $this->activeIngredient;
+    }
+    public function setActiveIngredient(string $a): self
+    {
+        $this->activeIngredient = $a;
+        return $this;
+    }
+
+    public function getPrice(): float
     {
         return $this->price;
     }
-
-    public function setPrice(?float $price): self
+    public function setPrice(float $price): self
     {
         $this->price = $price;
         return $this;
     }
 
-    public function getImageUrl(): ?string { return $this->imageUrl; }
-    public function setImageUrl(?string $url): self { $this->imageUrl = $url; return $this; }
+    public function getExpiryDate(): ?\DateTimeInterface
+    {
+        return $this->expiryDate;
+    }
+    public function setExpiryDate(?\DateTimeInterface $d): self
+    {
+        $this->expiryDate = $d;
+        return $this;
+    }
 
-    public function getCreatedAt(): ?\DateTimeInterface { return $this->createdAt; }
-    public function setCreatedAt(\DateTimeInterface $createdAt): self { $this->createdAt = $createdAt; return $this; }
+    public function getStock(): ?Stock
+    {
+        return $this->stock;
+    }
+    public function setStock(?Stock $stock): self
+    {
+        $this->stock = $stock;
+        return $this;
+    }
 }

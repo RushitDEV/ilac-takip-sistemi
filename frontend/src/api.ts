@@ -1,48 +1,48 @@
+// src/api.ts
+
 const BASE_URL = "http://localhost/api";
 
 export const API_ENDPOINTS = {
-    // Auth
+    // AUTH
     LOGIN: `${BASE_URL}/auth/login`,
     LOGOUT: `${BASE_URL}/auth/logout`,
 
-    // Dashboard
+    // DASHBOARD
     DASHBOARD_STATS: `${BASE_URL}/dashboard/stats`,
 
-    // Medications (Eczacı Paneli)
+    // MEDICATIONS
     MEDICATION_CREATE: `${BASE_URL}/medication`,
     MEDICATION_LIST: `${BASE_URL}/medication`,
     MEDICATION_DETAIL: (id: string) => `${BASE_URL}/medication/${id}`,
     MEDICATION_UPDATE: (id: string) => `${BASE_URL}/medication/${id}`,
     MEDICATION_DELETE: (id: string) => `${BASE_URL}/medication/${id}`,
 
-    // Prescriptions (Hasta Paneli)
+    // PATIENTS
+    PATIENTS: `${BASE_URL}/patient`,
+    PATIENT_DETAIL: (id: string) => `${BASE_URL}/patient/${id}`,
+    PATIENT_UPDATE: (id: string) => `${BASE_URL}/patient/${id}`,
+    PATIENT_DELETE: (id: string) => `${BASE_URL}/patient/${id}`,
+
+    // PRESCRIPTIONS (Hasta Paneli)
     PRESCRIPTIONS: `${BASE_URL}/prescription`,
     TAKE_DOSE: `${BASE_URL}/prescription/take`,
 
-    //Stock
-    STOCK_LIST: "/api/stock",
-    STOCK_ADD: "/api/stock/add",
-    STOCK_REMOVE: "/api/stock/remove",
+    // STOCK
+    STOCK_LIST: `${BASE_URL}/stock`,
+    STOCK_ADD: `${BASE_URL}/stock/add`,
+    STOCK_REMOVE: `${BASE_URL}/stock/remove`,
 
-    //Patient Tracking
-    PATIENT_LIST: "/api/patient-tracking/patients",
-    PATIENT_PRESCRIPTIONS: (patientId: string) =>
-        `/api/patient-tracking/${patientId}/prescriptions`,
-    PRESCRIPTION_DOSES: (prescriptionId: string) =>
-        `/api/patient-tracking/prescription/${prescriptionId}/doses`,
+    // SHIPMENT
+    SHIPMENT_LIST: `${BASE_URL}/shipment`,
+    SHIPMENT_CREATE: `${BASE_URL}/shipment/create`,
+    SHIPMENT_UPDATE: (id: string) => `${BASE_URL}/shipment/${id}/update-status`,
 
-    //Shipment
-    SHIPMENT_LIST: "/api/shipment",
-    SHIPMENT_CREATE: "/api/shipment/create",
-    SHIPMENT_UPDATE: (id: string) => `/api/shipment/${id}/update-status`,
+    // NOTIFICATIONS
+    NOTIFICATION_LIST: `${BASE_URL}/notifications`,
+    NOTIFICATION_MARK_READ: (id: string) => `${BASE_URL}/notifications/mark-read/${id}`,
+    NOTIFICATION_GENERATE_STOCK: `${BASE_URL}/notifications/generate/stock`,
+    NOTIFICATION_GENERATE_SHIPMENT: `${BASE_URL}/notifications/generate/shipment`,
 
-    //Bildirim
-    NOTIFICATION_LIST: "/api/notifications",
-    NOTIFICATION_MARK_READ: (id: string) => `/api/notifications/mark-read/${id}`,
-
-    NOTIFICATION_GENERATE_STOCK: "/api/notifications/generate/stock",
-    NOTIFICATION_GENERATE_SHIPMENT: "/api/notifications/generate/shipment",
-
-    //life cycle
-    LIFECYCLE_ALL: "/api/lifecycle/all",
+    // LIFE CYCLE
+    LIFECYCLE_ALL: `${BASE_URL}/lifecycle/all`,
 };

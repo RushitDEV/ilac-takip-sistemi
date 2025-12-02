@@ -13,30 +13,35 @@ class Patient
     #[ORM\Column(type: "uuid")]
     private ?string $id = null;
 
-    #[ORM\Column(length: 20)]
-    private ?string $tcNo = null;
+    #[ORM\Column(length: 120)]
+    private ?string $name = null;
 
-    #[ORM\Column(length: 20, nullable: true)]
-    private ?string $phone = null;
+    #[ORM\Column(length: 120)]
+    private ?string $surname = null;
 
-    #[ORM\Column(type: "integer")]
-    private ?int $age = null;
+    #[ORM\Column(length: 20, unique: true)]
+    private ?string $tc = null;
 
-    #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?User $user = null;
+    #[ORM\Column(length: 10)]
+    private ?string $gender = null;
+
+    #[ORM\Column(type: "date")]
+    private ?\DateTimeInterface $birthDate = null;
 
     public function getId(): ?string { return $this->id; }
 
-    public function getTcNo(): ?string { return $this->tcNo; }
-    public function setTcNo(string $tcNo): self { $this->tcNo = $tcNo; return $this; }
+    public function getName(): ?string { return $this->name; }
+    public function setName(string $name): self { $this->name = $name; return $this; }
 
-    public function getPhone(): ?string { return $this->phone; }
-    public function setPhone(?string $phone): self { $this->phone = $phone; return $this; }
+    public function getSurname(): ?string { return $this->surname; }
+    public function setSurname(string $surname): self { $this->surname = $surname; return $this; }
 
-    public function getAge(): ?int { return $this->age; }
-    public function setAge(int $age): self { $this->age = $age; return $this; }
+    public function getTc(): ?string { return $this->tc; }
+    public function setTc(string $tc): self { $this->tc = $tc; return $this; }
 
-    public function getUser(): ?User { return $this->user; }
-    public function setUser(?User $user): self { $this->user = $user; return $this; }
+    public function getGender(): ?string { return $this->gender; }
+    public function setGender(string $gender): self { $this->gender = $gender; return $this; }
+
+    public function getBirthDate(): ?\DateTimeInterface { return $this->birthDate; }
+    public function setBirthDate(\DateTimeInterface $birthDate): self { $this->birthDate = $birthDate; return $this; }
 }

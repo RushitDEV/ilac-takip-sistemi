@@ -73,7 +73,7 @@ export function PatientTracking() {
 
         try {
             const data = await apiClient(
-                API_ENDPOINTS.PATIENT_PRESCRIPTIONS(patient.id)
+                API_ENDPOINTS.PRESCRIPTION_LIST_BY_PATIENT(patient.id)
             );
 
             setPrescriptions(data || []);
@@ -82,6 +82,7 @@ export function PatientTracking() {
             alert("Reçeteler alınamadı: " + err.message);
         }
     };
+
 
     return (
         <div className="space-y-6">

@@ -31,6 +31,14 @@ export const API_ENDPOINTS = {
     // PRESCRIPTIONS (Hasta Paneli)
     PRESCRIPTIONS: `${BASE_URL}/prescription`,
     TAKE_DOSE: `${BASE_URL}/prescription/take`,
+    PRESCRIPTION_CREATE: `${BASE_URL}/prescription`,
+    // PRESCRIPTIONS
+    PRESCRIPTION_LIST_BY_PATIENT: (id: string) =>
+        `${BASE_URL}/prescription/patient/${id}`,
+
+    PRESCRIPTION_DELETE: (id: string) =>
+        `${BASE_URL}/prescription/${id}`,
+
 
     // STOCK
     STOCK_LIST: `${BASE_URL}/stock`,

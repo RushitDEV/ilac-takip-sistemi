@@ -58,6 +58,7 @@ export default function App() {
         return (
             <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
                 <div className="max-w-4xl w-full">
+
                     <div className="text-center mb-12">
                         <div className="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                             <Pill className="w-8 h-8 text-white" />
@@ -130,7 +131,6 @@ export default function App() {
         );
     }
 
-    // BACKEND'DEN: user.roles → ["pharmacy"] gelecektir
     const isPharmacy = currentUser?.roles?.includes('ROLE_ADMIN');
 
     return (

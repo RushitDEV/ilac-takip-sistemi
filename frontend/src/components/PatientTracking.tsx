@@ -4,27 +4,19 @@ import { API_ENDPOINTS } from "../api";
 
 export function PatientTracking() {
     const [patients, setPatients] = useState<any[]>([]);
-    const [selectedPatient, setSelectedPatient] = useState<any>(null);
-    const [prescriptions, setPrescriptions] = useState<any[]>([]);
-    const [selectedPrescription, setSelectedPrescription] = useState<any>(null);
-    const [doses, setDoses] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
-    // Hasta listesini yükle
     const loadPatients = async () => {
-        const data = await apiClient(API_ENDPOINTS.PATIENT_LIST);
-        setPatients(data);
-    };
-
-    // Seçilen hastanın reçetelerini çek
-    const loadPrescriptions = async (patientId: string) => {
-        const data = await apiClient(API_ENDPOINTS.PATIENT_PRESCRIPTIONS(patientId));
-        setPrescriptions(data);
-    };
-
-    // Reçetedeki ilaç dozlarını getir
-    const loadDoses = async (prescriptionId: string) => {
-        const data = await apiClient(API_ENDPOINTS.PRESCRIPTION_DOSES(prescriptionId));
-        setDoses(data);
+        try {
+            const data = await apiClient(API_ENDPOINTS.PATIENTS);
+            setPatients(data || []);
+        } catch (err: any) {
+            console.error("Patient API Error:", err);
+            setError(err.message || "Hasta listesi alınamadı.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -32,84 +24,39 @@ export function PatientTracking() {
     }, []);
 
     return (
-        <div className="max-w-7xl space-y-6">
-            <h1 className="text-2xl font-bold">Hasta Takibi</h1>
+        <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Hasta Takibi</h2>
 
-            {/* Hasta Listesi */}
-            <div className="bg-white p-4 border rounded-xl">
-                <h2 className="font-semibold mb-3">Hastalar</h2>
-                <ul className="space-y-2">
-                    {patients.map((p) => (
-                        <li
-                            key={p.id}
-                            className="p-3 border rounded cursor-pointer hover:bg-gray-50"
-                            onClick={() => {
-                                setSelectedPatient(p);
-                                loadPrescriptions(p.id);
-                            }}
-                        >
-                            {p.name} {p.surname} - {p.tc}
-                        </li>
-                    ))}
-                </ul>
-            </div>
+            {loading && <p>Yükleniyor...</p>}
+            {error && <p className="text-red-500">{error}</p>}
 
-            {/* Reçeteler */}
-            {selectedPatient && (
-                <div className="bg-white p-4 border rounded-xl">
-                    <h2 className="font-semibold mb-3">
-                        Reçeteler — {selectedPatient.name} {selectedPatient.surname}
-                    </h2>
-                    <ul className="space-y-2">
-                        {prescriptions.map((pr) => (
-                            <li
-                                key={pr.id}
-                                className="p-3 border rounded cursor-pointer hover:bg-gray-50"
-                                onClick={() => {
-                                    setSelectedPrescription(pr);
-                                    loadDoses(pr.id);
-                                }}
-                            >
-                                Dr: {pr.doctor} — {pr.createdAt}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+            {!loading && patients.length === 0 && (
+                <p>Henüz hasta kaydı bulunamadı.</p>
             )}
 
-            {/* Doz Takibi */}
-            {selectedPrescription && (
-                <div className="bg-white p-4 border rounded-xl">
-                    <h2 className="font-semibold mb-3">İlaç Dozları</h2>
-
-                    <table className="w-full">
-                        <thead>
-                        <tr className="border-b">
-                            <th className="py-2">İlaç</th>
-                            <th className="py-2">Etken Madde</th>
-                            <th className="py-2">Saat</th>
-                            <th className="py-2">Durum</th>
+            {patients.length > 0 && (
+                <table className="w-full border rounded-lg">
+                    <thead>
+                    <tr className="bg-gray-100">
+                        <th className="p-3">Ad</th>
+                        <th className="p-3">Soyad</th>
+                        <th className="p-3">TC</th>
+                        <th className="p-3">Cinsiyet</th>
+                        <th className="p-3">Doğum Tarihi</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {patients.map((p) => (
+                        <tr key={p.id} className="border-t">
+                            <td className="p-3">{p.name}</td>
+                            <td className="p-3">{p.surname}</td>
+                            <td className="p-3">{p.tc}</td>
+                            <td className="p-3">{p.gender}</td>
+                            <td className="p-3">{p.birthDate}</td>
                         </tr>
-                        </thead>
-
-                        <tbody>
-                        {doses.map((d) => (
-                            <tr key={d.id} className="border-b">
-                                <td className="py-2">{d.medication.name}</td>
-                                <td className="py-2">{d.medication.activeIngredient}</td>
-                                <td className="py-2">{d.time}</td>
-                                <td className="py-2">
-                                    {d.status === "taken" ? (
-                                        <span className="text-green-600">Alındı</span>
-                                    ) : (
-                                        <span className="text-red-600">Bekliyor</span>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                </div>
+                    ))}
+                    </tbody>
+                </table>
             )}
         </div>
     );

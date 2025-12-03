@@ -45,7 +45,6 @@ export function PharmacyPanel({ user, onLogout }: PharmacyPanelProps) {
 
         { id: 'supply' as TabType, label: 'Tedarik Zinciri', icon: Truck },
         { id: 'stock' as TabType, label: 'Stok Yönetimi', icon: Box },
-        { id: 'lifecycle' as TabType, label: 'Yaşam Döngüsü', icon: Package },
     ];
 
     const renderContent = () => {
@@ -62,8 +61,6 @@ export function PharmacyPanel({ user, onLogout }: PharmacyPanelProps) {
                 return <SupplyChain />;
             case 'stock':
                 return <StockManagement />;
-            case 'lifecycle':
-                return <Lifecycle />;
             default:
                 return <Dashboard />;
         }

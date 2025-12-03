@@ -1,9 +1,17 @@
-import { useState, useEffect } from 'react';
+/*********************************************************************
+ * PREMIUM UI REVAMP — STOCK MANAGEMENT
+ * Backend endpoints değişmedi, sadece görsel iyileştirme yapıldı.
+ *********************************************************************/
+
+import { useState, useEffect } from "react";
 import {
     AlertTriangle,
     PlusCircle,
     MinusCircle,
-} from 'lucide-react';
+    PackageSearch,
+    Warehouse,
+    Boxes
+} from "lucide-react";
 import { apiClient } from "../apiClient";
 import { API_ENDPOINTS } from "../api";
 
@@ -24,28 +32,33 @@ interface StockItem {
 }
 
 export function StockManagement() {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus] = useState<'all' | 'good' | 'low' | 'critical'>('all');
+    const [searchTerm, setSearchTerm] = useState("");
     const [stocks, setStocks] = useState<StockItem[]>([]);
     const [allMedications, setAllMedications] = useState<any[]>([]);
     const [showAdjustModal, setShowAdjustModal] = useState(false);
     const [adjustType, setAdjustType] = useState<"add" | "remove">("add");
-    const [adjustAmount, setAdjustAmount] = useState<string>("");
-    const [adjustNote, setAdjustNote] = useState<string>("");
+    const [adjustAmount, setAdjustAmount] = useState("");
+    const [adjustNote, setAdjustNote] = useState("");
     const [selectedStock, setSelectedStock] = useState<StockItem | null>(null);
-    const [selectedMedicationId, setSelectedMedicationId] = useState<string>("");
+    const [selectedMedicationId, setSelectedMedicationId] = useState("");
     const [isSaving, setIsSaving] = useState(false);
 
-    const calculateStatus = (current: number, min: number, expiryDate?: string | null) => {
+    /*********************************************************************
+     * STATUS CALCULATOR
+     *********************************************************************/
+    const calculateStatus = (
+        current: number,
+        min: number,
+        expiryDate?: string | null
+    ) => {
         let expiryCritical = false;
 
         if (expiryDate) {
             const today = new Date();
             const exp = new Date(expiryDate);
-            const diffDays = (exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
-
-            if (diffDays <= 7) expiryCritical = true;
-            else if (diffDays <= 30 && current > min * 1.5) return "low";
+            const diff = (exp.getTime() - today.getTime()) / (1000 * 3600 * 24);
+            if (diff <= 7) expiryCritical = true;
+            else if (diff <= 30 && current > min * 1.5) return "low";
         }
 
         if (expiryCritical) return "critical";
@@ -54,20 +67,23 @@ export function StockManagement() {
         return "good";
     };
 
+    /*********************************************************************
+     * LOAD FUNCTIONS
+     *********************************************************************/
     const loadStock = async () => {
         try {
             const data = await apiClient(API_ENDPOINTS.STOCK_LIST);
 
             const mapped: StockItem[] = (data || []).map((item: any) => {
                 const expiry =
-                    item.expiryDate ??
-                    item.medication?.expiryDate ??
-                    item.medication?.expirationDate ??
+                    item.expiryDate ||
+                    item.medication?.expiryDate ||
+                    item.medication?.expirationDate ||
                     null;
 
                 return {
                     id: item.id,
-                    medicationId: item.medication.id, // ✔ EKLENDİ
+                    medicationId: item.medication.id,
                     name: item.medication.name,
                     barcode: item.medication.barcode,
                     manufacturer: item.medication.manufacturer,
@@ -77,24 +93,20 @@ export function StockManagement() {
                     maxStock: item.maxStock,
                     lastRestocked: item.lastRestock,
                     expiryDate: expiry,
-                    price: item.medication.price ?? 0,
-                    status: calculateStatus(item.currentStock, item.minStock, expiry),
+                    price: item.medication.price || 0,
+                    status: calculateStatus(item.currentStock, item.minStock, expiry)
                 };
             });
 
             setStocks(mapped);
         } catch (err: any) {
-            alert("Stok listesi yüklenemedi: " + (err.message || ""));
+            alert("Stok listesi alınamadı!");
         }
     };
 
     const loadMedications = async () => {
-        try {
-            const meds = await apiClient(API_ENDPOINTS.MEDICATION_LIST);
-            setAllMedications(meds || []);
-        } catch {
-            console.error("İlaçlar yüklenemedi.");
-        }
+        const meds = await apiClient(API_ENDPOINTS.MEDICATION_LIST);
+        setAllMedications(meds || []);
     };
 
     useEffect(() => {
@@ -102,14 +114,18 @@ export function StockManagement() {
         loadMedications();
     }, []);
 
-    const filteredMedicines = stocks.filter((med) => {
-        const matchesSearch =
-            med.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            med.barcode.includes(searchTerm);
+    /*********************************************************************
+     * FILTER
+     *********************************************************************/
+    const filtered = stocks.filter(
+        (x) =>
+            x.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            x.barcode.includes(searchTerm)
+    );
 
-        return matchesSearch;
-    });
-
+    /*********************************************************************
+     * MODAL OPEN & CLOSE
+     *********************************************************************/
     const openAdjustModal = (stock: StockItem | null, type: "add" | "remove") => {
         setSelectedStock(stock);
         setAdjustType(type);
@@ -126,18 +142,17 @@ export function StockManagement() {
         setAdjustAmount("");
     };
 
+    /*********************************************************************
+     * SAVE STOCK
+     *********************************************************************/
     const handleAdjustStock = async () => {
         const amountNum = parseInt(adjustAmount, 10);
-        if (isNaN(amountNum) || amountNum <= 0) {
-            alert("Geçerli bir miktar girin.");
-            return;
-        }
+        if (!amountNum || amountNum <= 0) return alert("Geçerli bir miktar girin!");
 
         setIsSaving(true);
 
         try {
             if (adjustType === "add" && !selectedStock) {
-                // ✔ YENİ STOK EKLEME
                 await apiClient(API_ENDPOINTS.STOCK_ADD, {
                     method: "POST",
                     data: {
@@ -146,103 +161,133 @@ export function StockManagement() {
                         note: adjustNote,
                         minStock: 5,
                         maxStock: 100
-                    },
+                    }
                 });
             } else if (adjustType === "add" && selectedStock) {
-                // ✔ MEVCUT STOĞU ARTIRMA
                 await apiClient(API_ENDPOINTS.STOCK_ADD, {
                     method: "POST",
                     data: {
-                        medicationId: selectedStock.medicationId, // ✔ DÜZELTİLDİ
+                        medicationId: selectedStock.medicationId,
                         amount: amountNum,
-                        note: adjustNote,
-                    },
+                        note: adjustNote
+                    }
                 });
             } else {
-                // ✔ STOĞU DÜŞÜRME
                 await apiClient(API_ENDPOINTS.STOCK_REMOVE, {
                     method: "POST",
                     data: {
-                        stockId: selectedStock?.id, // REMOVE için doğru
+                        stockId: selectedStock?.id,
                         amount: amountNum,
-                        note: adjustNote,
-                    },
+                        note: adjustNote
+                    }
                 });
             }
 
             await loadStock();
             closeAdjustModal();
-        } catch (error: any) {
-            alert("Stok güncellenemedi: " + JSON.stringify(error));
+        } catch {
+            alert("Stok güncellenemedi.");
         } finally {
             setIsSaving(false);
         }
     };
 
+    /*********************************************************************
+     * UI — MAIN
+     *********************************************************************/
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto p-4 space-y-10">
 
-            <div className="flex justify-between items-center my-6">
-                <h2 className="text-2xl font-bold">Stok Yönetimi</h2>
+            {/* HEADER */}
+            <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                    <div className="bg-blue-600 p-3 rounded-xl text-white">
+                        <Warehouse className="w-6 h-6" />
+                    </div>
+                    <h2 className="text-3xl font-bold text-gray-900">Stok Yönetimi</h2>
+                </div>
 
                 <button
                     onClick={() => openAdjustModal(null, "add")}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2 transition"
                 >
                     <PlusCircle className="w-5 h-5" /> Yeni Stok Ekle
                 </button>
             </div>
 
-            {/* --- STOK TABLOSU --- */}
-            <div className="bg-white rounded-xl shadow p-4">
-                <table className="w-full text-left">
-                    <thead>
-                    <tr className="border-b text-gray-600">
-                        <th className="py-2">İlaç</th>
-                        <th>Barkod</th>
-                        <th>Üretici</th>
-                        <th>Etken Madde</th>
-                        <th>Stok</th>
-                        <th>Durum</th>
-                        <th>İşlem</th>
+            {/* SEARCH */}
+            <div className="bg-white p-4 rounded-xl shadow flex items-center gap-3">
+                <PackageSearch className="w-5 h-5 text-gray-500" />
+                <input
+                    type="text"
+                    placeholder="İlaç adı veya barkod ara..."
+                    className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+
+            {/* TABLE */}
+            <div className="bg-white rounded-xl shadow border overflow-hidden">
+                <table className="w-full">
+                    <thead className="bg-gray-100 text-gray-700 text-sm border-b">
+                    <tr>
+                        <th className="p-3 text-left">İlaç</th>
+                        <th className="p-3">Barkod</th>
+                        <th className="p-3">Üretici</th>
+                        <th className="p-3">Etken Madde</th>
+                        <th className="p-3 text-center">Stok</th>
+                        <th className="p-3 text-center">Durum</th>
+                        <th className="p-3 text-center">İşlem</th>
                     </tr>
                     </thead>
 
-                    <tbody>
-                    {filteredMedicines.map((s) => (
-                        <tr key={s.id} className="border-b">
-                            <td className="py-2 font-semibold">{s.name}</td>
-                            <td>{s.barcode}</td>
-                            <td>{s.manufacturer}</td>
-                            <td>{s.activeIngredient}</td>
-                            <td>{s.stock}</td>
+                    <tbody className="text-sm">
+                    {filtered.map((s, idx) => (
+                        <tr
+                            key={s.id}
+                            className={`border-b hover:bg-gray-50 transition ${
+                                idx % 2 ? "bg-white" : "bg-gray-50/50"
+                            }`}
+                        >
+                            <td className="p-3 font-semibold">{s.name}</td>
+                            <td className="p-3">{s.barcode}</td>
+                            <td className="p-3">{s.manufacturer}</td>
+                            <td className="p-3">{s.activeIngredient}</td>
 
-                            <td>
+                            <td className="p-3 text-center font-bold">{s.stock}</td>
+
+                            <td className="p-3 text-center">
                                 {s.status === "critical" && (
-                                    <span className="text-red-600 font-bold flex items-center gap-1">
-                                        <AlertTriangle size={16} /> Kritik
-                                    </span>
+                                    <span className="px-3 py-1 bg-red-100 border border-red-300 text-red-700 rounded-lg font-semibold flex items-center justify-center gap-1">
+                                            <AlertTriangle size={14} /> Kritik
+                                        </span>
                                 )}
                                 {s.status === "low" && (
-                                    <span className="text-yellow-600 font-bold">Düşük</span>
+                                    <span className="px-3 py-1 bg-yellow-100 border border-yellow-300 text-yellow-700 rounded-lg font-semibold">
+                                            Düşük
+                                        </span>
                                 )}
                                 {s.status === "good" && (
-                                    <span className="text-green-600 font-bold">İyi</span>
+                                    <span className="px-3 py-1 bg-green-100 border border-green-300 text-green-700 rounded-lg font-semibold">
+                                            İyi
+                                        </span>
                                 )}
                             </td>
 
-                            <td className="flex gap-2 py-2">
+                            <td className="p-3 flex justify-center gap-2">
                                 <button
                                     onClick={() => openAdjustModal(s, "add")}
-                                    className="p-2 bg-green-600 text-white rounded"
+                                    className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow transition"
                                 >
-                                    <PlusCircle size={16}/>
+                                    <PlusCircle size={16} />
                                 </button>
+
                                 <button
                                     onClick={() => openAdjustModal(s, "remove")}
-                                    className="p-2 bg-red-600 text-white rounded"
+                                    className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow transition"
                                 >
-                                    <MinusCircle size={16}/>
+                                    <MinusCircle size={16} />
                                 </button>
                             </td>
                         </tr>
@@ -251,24 +296,30 @@ export function StockManagement() {
                 </table>
             </div>
 
-            {/* --- MODAL --- */}
+            {/* MODAL */}
             {showAdjustModal && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-                    <div className="bg-white w-full max-w-md p-6 rounded-xl space-y-4">
-                        <h3 className="text-lg font-bold">
+                    <div className="bg-white w-full max-w-md p-6 rounded-2xl shadow-xl space-y-5">
+
+                        <h3 className="text-xl font-bold text-gray-900">
                             {adjustType === "add"
-                                ? selectedStock ? "Stok Ekle" : "Yeni Stok Ekle"
+                                ? selectedStock
+                                    ? "Stok Artır"
+                                    : "Yeni Stok Oluştur"
                                 : "Stok Düşür"}
                         </h3>
 
-                        {/* Yeni stok eklerken ilaç seçimi */}
                         {!selectedStock && adjustType === "add" && (
-                            <div>
-                                <label className="block text-sm mb-1 font-medium">İlaç Seç</label>
+                            <div className="space-y-1">
+                                <label className="text-sm font-semibold">
+                                    İlaç Seç
+                                </label>
                                 <select
-                                    className="w-full border p-2 rounded"
+                                    className="w-full border p-2 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={selectedMedicationId}
-                                    onChange={(e) => setSelectedMedicationId(e.target.value)}
+                                    onChange={(e) =>
+                                        setSelectedMedicationId(e.target.value)
+                                    }
                                 >
                                     <option value="">Seçiniz</option>
                                     {allMedications.map((m) => (
@@ -281,37 +332,38 @@ export function StockManagement() {
                         )}
 
                         {selectedStock && (
-                            <p className="text-sm">
-                                Mevcut stok: <b>{selectedStock.stock} kutu</b>
-                            </p>
+                            <div className="bg-gray-50 border rounded-lg p-3 text-sm">
+                                Mevcut stok:{" "}
+                                <span className="font-bold">{selectedStock.stock}</span>
+                            </div>
                         )}
 
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Miktar</label>
+                        <div className="space-y-1">
+                            <label className="text-sm font-semibold">Miktar</label>
                             <input
                                 type="number"
                                 min={1}
-                                className="w-full border p-2 rounded"
+                                className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                                 value={adjustAmount}
                                 onChange={(e) => setAdjustAmount(e.target.value)}
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Not (opsiyonel)</label>
+                        <div className="space-y-1">
+                            <label className="text-sm font-semibold">Not (opsiyonel)</label>
                             <input
                                 type="text"
-                                className="w-full border p-2 rounded"
-                                placeholder="Satış, tedarik, iade..."
+                                className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                placeholder="Satış, tedarik, iade vs."
                                 value={adjustNote}
                                 onChange={(e) => setAdjustNote(e.target.value)}
                             />
                         </div>
 
-                        <div className="flex justify-end gap-2 mt-4">
+                        <div className="flex justify-end gap-3 pt-2">
                             <button
                                 onClick={closeAdjustModal}
-                                className="px-4 py-2 bg-gray-300 rounded-lg"
+                                className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 transition"
                             >
                                 İptal
                             </button>
@@ -319,13 +371,17 @@ export function StockManagement() {
                             <button
                                 onClick={handleAdjustStock}
                                 disabled={isSaving}
-                                className={`px-4 py-2 rounded-lg text-white ${
+                                className={`px-4 py-2 rounded-lg text-white shadow transition ${
                                     adjustType === "add"
                                         ? "bg-green-600 hover:bg-green-700"
                                         : "bg-red-600 hover:bg-red-700"
                                 }`}
                             >
-                                {isSaving ? "Kaydediliyor..." : adjustType === "add" ? "Ekle" : "Düşür"}
+                                {isSaving
+                                    ? "Kaydediliyor..."
+                                    : adjustType === "add"
+                                        ? "Stok Ekle"
+                                        : "Stok Düş"}
                             </button>
                         </div>
                     </div>

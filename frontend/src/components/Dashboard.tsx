@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Package, Users, TrendingUp, AlertTriangle } from 'lucide-react';
+import {
+    Package,
+    Users,
+    TrendingUp,
+    AlertTriangle
+} from 'lucide-react';
 import { apiClient } from '../../src/apiClient';
 import { API_ENDPOINTS } from '../../src/api';
 
@@ -24,10 +29,7 @@ export function Dashboard() {
     const loadDashboardData = async () => {
         try {
             setIsLoading(true);
-
-            // 🔥 GERÇEK dashboard endpoint’i
             const data = await apiClient(API_ENDPOINTS.DASHBOARD_STATS);
-
             setStats(data);
         } catch (err: any) {
             setError(err.message || 'API error');
@@ -37,7 +39,11 @@ export function Dashboard() {
     };
 
     if (isLoading) {
-        return <p className="text-center mt-10">Yükleniyor...</p>;
+        return (
+            <div className="flex justify-center items-center py-20">
+                <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
+            </div>
+        );
     }
 
     if (error) {
@@ -55,35 +61,37 @@ export function Dashboard() {
             title: 'Toplam İlaç',
             value: stats.totalMedicines,
             icon: Package,
-            bgColor: 'bg-blue-50',
-            iconColor: 'text-blue-600'
+            bgColor: 'bg-blue-100/60',
+            iconColor: 'text-blue-700'
         },
         {
             title: 'Toplam Hasta',
             value: stats.totalPatients,
             icon: Users,
-            bgColor: 'bg-green-50',
-            iconColor: 'text-green-600'
+            bgColor: 'bg-green-100/60',
+            iconColor: 'text-green-700'
         },
         {
             title: 'Düşük Stok',
             value: stats.lowStock,
             icon: AlertTriangle,
-            bgColor: 'bg-yellow-50',
-            iconColor: 'text-yellow-600'
+            bgColor: 'bg-yellow-100/60',
+            iconColor: 'text-yellow-700'
         },
         {
             title: 'Bugün Eklenen İlaç',
             value: stats.todayAdded,
             icon: TrendingUp,
-            bgColor: 'bg-purple-50',
-            iconColor: 'text-purple-600'
+            bgColor: 'bg-purple-100/60',
+            iconColor: 'text-purple-700'
         }
     ];
 
     return (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Dashboard</h2>
+        <div className="space-y-8">
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900">
+                Dashboard
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {statCards.map((stat) => {
@@ -91,13 +99,23 @@ export function Dashboard() {
                     return (
                         <div
                             key={stat.title}
-                            className="bg-white p-6 rounded-xl border hover:shadow-lg transition"
+                            className="
+                                bg-white p-6
+                                rounded-2xl border shadow-sm
+                                hover:shadow-xl
+                                transition-all duration-300
+                                hover:-translate-y-1
+                                backdrop-blur-md
+                            "
                         >
-                            <div className={`${stat.bgColor} w-12 h-12 rounded-lg flex items-center justify-center`}>
-                                <Icon className={`w-6 h-6 ${stat.iconColor}`} />
+                            <div className={`${stat.bgColor} w-14 h-14 rounded-xl flex items-center justify-center shadow-inner`}>
+                                <Icon className={`w-7 h-7 ${stat.iconColor}`} />
                             </div>
-                            <p className="text-gray-600 text-sm mt-3">{stat.title}</p>
-                            <p className="text-3xl font-bold">{stat.value}</p>
+
+                            <p className="text-gray-500 text-sm mt-4">{stat.title}</p>
+                            <p className="text-4xl font-bold text-gray-900 mt-1">
+                                {stat.value}
+                            </p>
                         </div>
                     );
                 })}

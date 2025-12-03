@@ -12,26 +12,65 @@ use Symfony\Component\Routing\Annotation\Route;
 #[Route('/api/patient')]
 class PatientController extends AbstractController
 {
-    #[Route('', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $em): JsonResponse
+    #[Route('', name: 'app_api_patient_create', methods: ['POST'])]
+    public function create(Request $request, UserPasswordHasherInterface $passwordHasher): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
 
-        $patient = new Patient();
-        $patient->setName($data['name']);
-        $patient->setSurname($data['surname']);
-        $patient->setTc($data['tc']);
-        $patient->setGender($data['gender']);
-        $patient->setBirthDate(new \DateTime($data['birthDate']));
+        $name = $data['name'] ?? null;
+        $surname = $data['surname'] ?? null;
+        $tc = $data['tc'] ?? null;
+        $gender = $data['gender'] ?? null;
+        $birthDate = $data['birthDate'] ?? null;
 
-        $em->persist($patient);
-        $em->flush();
+        if (!$name || !$surname || !$tc) {
+            return new JsonResponse(['message' => 'Ad, soyad ve TC zorunludur'], 400);
+        }
+
+        // -----------------------------------------
+        // 1) USER OLUŞTUR (HASTA LOGİN İÇİN)
+        // -----------------------------------------
+        $email = $tc . '@hasta.com';
+        $rawPassword = substr($tc, -4); // TC'nin son 4 hanesi
+
+        $user = new User();
+        $user->setEmail($email);
+        $user->setRoles(['ROLE_PATIENT']);
+        $user->setPassword($passwordHasher->hashPassword($user, $rawPassword));
+
+        $this->em->persist($user);
+
+        // -----------------------------------------
+        // 2) PATIENT OLUŞTUR (KİŞİSEL BİLGİLER)
+        // -----------------------------------------
+        $patient = new Patient();
+        $patient->setName($name);
+        $patient->setSurname($surname);
+        $patient->setTc($tc);
+        $patient->setGender($gender);
+
+        if ($birthDate) {
+            try {
+                $patient->setBirthDate(new \DateTimeImmutable($birthDate));
+            } catch (\Exception $e) {}
+        }
+
+        // ➤ USER-PATIENT BAĞLANTISI
+        $patient->setUser($user);
+
+        $this->em->persist($patient);
+        $this->em->flush();
 
         return new JsonResponse([
-            'message' => 'Hasta kaydedildi',
-            'id' => $patient->getId()
-        ]);
+            'message' => 'Hasta oluşturuldu',
+            'patientId' => $patient->getId(),
+            'loginInfo' => [
+                'email' => $email,
+                'password' => $rawPassword
+            ]
+        ], 201);
     }
+
 
     #[Route('', methods: ['GET'])]
     public function list(EntityManagerInterface $em): JsonResponse

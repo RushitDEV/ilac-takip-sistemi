@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { Heart, LogOut, Pill, Calendar, Clock, Activity } from 'lucide-react';
 // Patient klasöründen import et
-import { MyMedicines } from './patient/MyMedicines.tsx';
-import { HealthData } from './patient/HealthData.tsx';
-import { MedicineCalendar } from './patient/MedicineCalendar.tsx';
-import { HealthHistory } from './patient/HealthHistory.tsx';
-
+import { MyMedicines } from './MyMedicines.tsx';
+import { HealthData } from './HealthData.tsx';
+import { MedicineCalendar } from './MedicineCalendar.tsx';
+import { HealthHistory } from './HealthHistory.tsx';
 
 interface PatientPanelProps {
     user: any;
@@ -27,15 +26,15 @@ export function PatientPanel({ user, onLogout }: PatientPanelProps) {
     const renderContent = () => {
         switch (activeTab) {
             case 'medicines':
-                return <MyMedicines />;
+                return <MyMedicines user={user} />;
             case 'health':
-                return <HealthData />;
+                return <HealthData user={user} />;
             case 'calendar':
-                return <MedicineCalendar />;
+                return <MedicineCalendar user={user} />;
             case 'history':
-                return <HealthHistory />;
+                return <HealthHistory user={user} />;
             default:
-                return <MyMedicines />;
+                return <MyMedicines user={user} />;
         }
     };
 
@@ -78,9 +77,10 @@ export function PatientPanel({ user, onLogout }: PatientPanelProps) {
                                     className={`
                                         flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap
                                         border-b-2 transition-colors
-                                        ${activeTab === tab.id
-                                        ? 'border-green-600 text-green-600'
-                                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                                        ${
+                                        activeTab === tab.id
+                                            ? 'border-green-600 text-green-600'
+                                            : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                                     }
                                     `}
                                 >

@@ -2,10 +2,8 @@
 
 namespace App\Controller\Api;
 
-use App\Entity\Patient;
 use App\Repository\PatientRepository;
 use App\Repository\PrescriptionRepository;
-use App\Repository\DoseScheduleRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
@@ -13,89 +11,43 @@ use Symfony\Component\Routing\Annotation\Route;
 #[Route('/api/patient-tracking')]
 class PatientTrackingController extends AbstractController
 {
-    // -------------------------------------------------
-    //  TÜM HASTALARI GETİR
-    // -------------------------------------------------
     #[Route('/patients', methods: ['GET'])]
     public function listPatients(PatientRepository $repo): JsonResponse
     {
+        // Gereksiz ilişkileri yüklemeden sadece listeyi dön
         $patients = $repo->findAll();
-        $data = [];
-
-        foreach ($patients as $p) {
-            $data[] = [
-                'id' => $p->getId(),
-                'name' => $p->getName(),
-                'surname' => $p->getSurname(),
-                'tc' => $p->getTc(),
-                'gender' => $p->getGender(),
-                'birthDate' => $p->getBirthDate()?->format('Y-m-d'),
-            ];
-        }
+        $data = array_map(fn($p) => [
+            'id' => $p->getId(),
+            'name' => $p->getName(),
+            'surname' => $p->getSurname(),
+            'tc' => $p->getTc(),
+            'birthDate' => $p->getBirthDate()?->format('Y-m-d'),
+        ], $patients);
 
         return new JsonResponse($data);
     }
 
-    // -------------------------------------------------
-    //  HASTANIN TÜM REÇETELERİ
-    // -------------------------------------------------
     #[Route('/{patientId}/prescriptions', methods: ['GET'])]
-    public function listPrescriptions(
-        string $patientId,
-        PrescriptionRepository $repo
-    ): JsonResponse {
+    public function listPrescriptions(string $patientId, PrescriptionRepository $repo): JsonResponse
+    {
+        // Optimizasyon: İlaç bilgisini Join ile getir
+        $prescriptions = $repo->createQueryBuilder('p')
+            ->innerJoin('p.medication', 'm')
+            ->addSelect('m')
+            ->where('p.patient = :pid')
+            ->setParameter('pid', $patientId)
+            ->getQuery()
+            ->getResult();
 
-        $prescriptions = $repo->findBy(['patient' => $patientId]);
-
-        $result = [];
-
-        foreach ($prescriptions as $pr) {
-
-            $medication = $pr->getMedication();
-            $totalDose = $pr->getTotalDose() ?? 0;
-            $usedDose = $pr->getUsedDose() ?? 0;
-            $remainingDose = max(0, $totalDose - $usedDose);
-
-            $result[] = [
-                'id' => $pr->getId(),
-                'createdAt' => $pr->getCreatedAt()?->format('Y-m-d'),
-                'doctor' => $pr->getDoctorName() ?? "Doktor Bilinmiyor",
-
-                'medicationName' => $medication?->getName() ?? "İlaç Belirtilmemiş",
-                'totalDose' => $totalDose,
-                'remainingDose' => $remainingDose,
-                'usedDose' => $usedDose,
-            ];
-        }
+        $result = array_map(fn($pr) => [
+            'id' => $pr->getId(),
+            'createdAt' => $pr->getCreatedAt()?->format('Y-m-d'),
+            'medicationName' => $pr->getMedication()->getName(),
+            'totalDose' => $pr->getTotalDose(),
+            'usedDose' => $pr->getUsedDose() ?? 0,
+            'remainingDose' => max(0, $pr->getTotalDose() - ($pr->getUsedDose() ?? 0)),
+        ], $prescriptions);
 
         return new JsonResponse($result);
-    }
-
-    // -------------------------------------------------
-    //  BİR REÇETENİN TÜM DOZ PROGRAMI
-    // -------------------------------------------------
-    #[Route('/prescription/{id}/doses', methods: ['GET'])]
-    public function getDoses(
-        string $id,
-        DoseScheduleRepository $repo
-    ): JsonResponse {
-
-        $doses = $repo->findBy(['prescription' => $id]);
-
-        $data = [];
-
-        foreach ($doses as $d) {
-            $data[] = [
-                'id' => $d->getId(),
-                'time' => $d->getTime()?->format('H:i'),
-                'status' => $d->isTaken() ? 'taken' : 'pending',
-                'medication' => [
-                    'name' => $d->getMedication()?->getName() ?? "İlaç Yok",
-                    'activeIngredient' => $d->getMedication()?->getActiveIngredient() ?? ""
-                ]
-            ];
-        }
-
-        return new JsonResponse($data);
     }
 }

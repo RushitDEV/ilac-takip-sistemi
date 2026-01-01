@@ -20,7 +20,13 @@ class StockController extends AbstractController
     #[Route('', methods: ['GET'])]
     public function list(StockRepository $repo): JsonResponse
     {
-        $stocks = $repo->findAll();
+        // İyileştirme: N+1 problemini çözmek için medication tablosunu JOIN ile tek seferde çekiyoruz
+        $stocks = $repo->createQueryBuilder('s')
+            ->innerJoin('s.medication', 'm')
+            ->addSelect('m')
+            ->getQuery()
+            ->getResult();
+
         $result = [];
 
         foreach ($stocks as $s) {
@@ -35,7 +41,6 @@ class StockController extends AbstractController
                 'expiryDate' => $s->getExpiryDate()?->format('Y-m-d'),
                 'note' => $s->getNote(),
 
-                // 💥 Frontend’in beklediği ilaç bilgileri
                 'medication' => [
                     'id' => $m->getId(),
                     'name' => $m->getName(),
@@ -43,8 +48,6 @@ class StockController extends AbstractController
                     'manufacturer' => $m->getManufacturer(),
                     'activeIngredient' => $m->getActiveIngredient(),
                     'price' => $m->getPrice(),
-
-                    // 💥 Eksikti: Frontend expiryDate istiyordu
                     'expiryDate' => $m->getExpiryDate()?->format('Y-m-d'),
                 ],
             ];

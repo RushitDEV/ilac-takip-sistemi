@@ -66,13 +66,7 @@ export default function App() {
                         <h1 className="text-gray-900 mb-2">İlaç Takip Sistemi</h1>
                         <p className="text-gray-600">Sisteme giriş yapmak için rolünüzü seçin</p>
 
-                        <button
-                            onClick={() => setShowDemo(true)}
-                            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                        >
-                            <Zap className="w-4 h-4" />
-                            Hızlı Demo Rehberi
-                        </button>
+
                     </div>
 
                     <div className="bg-white p-8 rounded-2xl border-2 border-gray-200 shadow-xl">

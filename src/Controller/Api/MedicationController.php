@@ -22,13 +22,13 @@ class MedicationController extends AbstractController
     ) {}
 
     // -------------------------------------------------
-    //  İLAÇ LİSTELE
-    //  Frontend: GET /api/medication
+    //  İLAÇ LİSTELE (Optimize Edildi)
     // -------------------------------------------------
     #[Route('', name: 'app_api_medication_list', methods: ['GET'])]
     public function list(): JsonResponse
     {
-        // İlaçları stokla birlikte çek
+        // Optimizasyon: İlaçları ve onlara bağlı stokları tek bir sorgu ile (JOIN FETCH) çekiyoruz.
+        // Bu sayede döngü içinde her ilaç için ayrı bir veritabanı sorgusu atılmasının önüne geçtik.
         $medications = $this->medicationRepo->createQueryBuilder('m')
             ->leftJoin('m.stock', 's')
             ->addSelect('s')
@@ -51,7 +51,7 @@ class MedicationController extends AbstractController
                 'price'            => $m->getPrice(),
                 'expiryDate'       => $m->getExpiryDate()?->format('Y-m-d'),
 
-                // stok bilgileri (yoksa 0 / null)
+                // Stok bilgileri (Yoksa varsayılan değerler döner)
                 'stock' => [
                     'id'           => $stock?->getId(),
                     'currentStock' => $stock?->getCurrentStock() ?? 0,
@@ -69,7 +69,6 @@ class MedicationController extends AbstractController
 
     // -------------------------------------------------
     //  İLAÇ OLUŞTUR
-    //  Frontend: POST /api/medication
     // -------------------------------------------------
     #[Route('', name: 'app_api_medication_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
@@ -98,7 +97,7 @@ class MedicationController extends AbstractController
             try {
                 $med->setExpiryDate(new \DateTimeImmutable($expiryDate));
             } catch (\Exception) {
-                // tarih parse edilemezse boş bırak
+                // Hatalı format gelirse sessizce atla
             }
         }
 
@@ -107,7 +106,7 @@ class MedicationController extends AbstractController
 
         return new JsonResponse([
             'id'      => $med->getId(),
-            'message' => 'İlaç kaydedildi',
+            'message' => 'İlaç başarıyla kaydedildi',
         ], 201);
     }
 
@@ -157,27 +156,18 @@ class MedicationController extends AbstractController
 
         $data = json_decode($request->getContent(), true) ?? [];
 
-        if (isset($data['name'])) {
-            $med->setName($data['name']);
-        }
-        if (isset($data['barcode'])) {
-            $med->setBarcode($data['barcode']);
-        }
-        if (isset($data['manufacturer'])) {
-            $med->setManufacturer($data['manufacturer']);
-        }
-        if (isset($data['activeIngredient'])) {
-            $med->setActiveIngredient($data['activeIngredient']);
-        }
-        if (isset($data['price'])) {
-            $med->setPrice((float)$data['price']);
-        }
+        // İyileştirme: Veri kontrolleri ve güncellemeler
+        if (isset($data['name'])) $med->setName($data['name']);
+        if (isset($data['barcode'])) $med->setBarcode($data['barcode']);
+        if (isset($data['manufacturer'])) $med->setManufacturer($data['manufacturer']);
+        if (isset($data['activeIngredient'])) $med->setActiveIngredient($data['activeIngredient']);
+        if (isset($data['price'])) $med->setPrice((float)$data['price']);
+
         if (array_key_exists('expiryDate', $data)) {
             if ($data['expiryDate']) {
                 try {
                     $med->setExpiryDate(new \DateTimeImmutable($data['expiryDate']));
-                } catch (\Exception) {
-                }
+                } catch (\Exception) {}
             } else {
                 $med->setExpiryDate(null);
             }
@@ -185,7 +175,7 @@ class MedicationController extends AbstractController
 
         $this->em->flush();
 
-        return new JsonResponse(['message' => 'İlaç güncellendi']);
+        return new JsonResponse(['message' => 'İlaç bilgileri güncellendi']);
     }
 
     // -------------------------------------------------
@@ -199,8 +189,8 @@ class MedicationController extends AbstractController
             return new JsonResponse(['message' => 'İlaç bulunamadı'], 404);
         }
 
-        // stok varsa önce onu sil
-        $stock = $this->stockRepo->findOneBy(['medication' => $med]);
+        // İlişkili stok varsa silmeyi garanti altına alıyoruz
+        $stock = $med->getStock();
         if ($stock) {
             $this->em->remove($stock);
         }
@@ -208,6 +198,6 @@ class MedicationController extends AbstractController
         $this->em->remove($med);
         $this->em->flush();
 
-        return new JsonResponse(['message' => 'İlaç silindi']);
+        return new JsonResponse(['message' => 'İlaç ve bağlı stok bilgileri silindi']);
     }
 }

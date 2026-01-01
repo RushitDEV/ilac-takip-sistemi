@@ -16,41 +16,34 @@ class DashboardController extends AbstractController
     #[Route('/stats', methods: ['GET'])]
     public function stats(EntityManagerInterface $em): JsonResponse
     {
-        // Toplam ilaç sayısı
-        $totalMedicines = $em->getRepository(Medication::class)->count([]);
+        // Optimizasyon: Native SQL kullanarak tek bir sorguda tüm sayımları yapıyoruz.
+        // Bu yöntem, her bir count için ayrı ayrı DB bağlantısı kurma maliyetini ortadan kaldırır.
+        $connection = $em->getConnection();
 
-        // Toplam hasta sayısı
-        $totalPatients = $em->getRepository(Patient::class)->count([]);
+        $sql = "
+            SELECT
+                (SELECT COUNT(id) FROM medication) as total_medicines,
+                (SELECT COUNT(id) FROM patient) as total_patients,
+                (SELECT COUNT(id) FROM stock WHERE current_stock <= min_stock) as low_stock_count,
+                (SELECT COUNT(id) FROM medication WHERE expiry_date >= :start AND expiry_date <= :end) as today_added
+        ";
 
-        // Düşük stok sayısı (NULL güvenli)
-        $lowStock = $em->getRepository(Stock::class)
-            ->createQueryBuilder('s')
-            ->select('COUNT(s.id)')
-            ->where('s.currentStock IS NOT NULL')
-            ->andWhere('s.minStock IS NOT NULL')
-            ->andWhere('s.currentStock <= s.minStock')
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        // Bugün eklenen ilaç — PostgreSQL uyumlu tarih karşılaştırması
         $today = new \DateTime();
-        $todayAdded = $em->getRepository(Medication::class)
-            ->createQueryBuilder('m')
-            ->select('COUNT(m.id)')
-            ->where('m.expiryDate >= :start')
-            ->andWhere('m.expiryDate < :end')
-            ->setParameter('start', $today->format('Y-m-d 00:00:00'))
-            ->setParameter('end', $today->format('Y-m-d 23:59:59'))
-            ->getQuery()
-            ->getSingleScalarResult();
+        $params = [
+            'start' => $today->format('Y-m-d 00:00:00'),
+            'end'   => $today->format('Y-m-d 23:59:59')
+        ];
+
+        // Sorguyu çalıştır ve sonucu ilişkisel dizi olarak al
+        $stats = $connection->executeQuery($sql, $params)->fetchAssociative();
 
         return new JsonResponse([
-            'totalMedicines' => (int)$totalMedicines,
-            'totalPatients' => (int)$totalPatients,
-            'lowStock' => (int)$lowStock,
-            'todayAdded' => (int)$todayAdded,
+            'totalMedicines'   => (int)($stats['total_medicines'] ?? 0),
+            'totalPatients'    => (int)($stats['total_patients'] ?? 0),
+            'lowStock'         => (int)($stats['low_stock_count'] ?? 0),
+            'todayAdded'       => (int)($stats['today_added'] ?? 0),
             'pendingShipments' => 0,
-            'notifications' => 0
+            'notifications'    => 0
         ]);
     }
 }
